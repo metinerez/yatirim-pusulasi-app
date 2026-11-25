@@ -1,0 +1,70 @@
+name: windows-derleme
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['probe/**', 'README.md', '.github/workflows/probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Bağımlılıklar
+        run: |
+          set -o pipefail
+          npm install --no-audit --no-fund 2>&1 | tee build.log
+      - name: Otomatik test (programı açar, veriyi günceller, ekran görüntüsü alır)
+        run: |
+          set -o pipefail
+          timeout 300 npx electron . --selftest 2>&1 | tail -50 | tee -a build.log || echo "selftest çıkış kodu $?" | tee -a build.log
+      - name: Windows kurulum dosyası
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          set -o pipefail
+          npx electron-builder --win nsis --x64 --publish never 2>&1 | tail -80 | tee -a build.log
+          ls -la dist | tee -a build.log
+      - name: Paketlenmiş programla test (PDF okuyucu asar içinde çalışıyor mu)
+        run: |
+          rm -rf selftest-data
+          SELFTEST_OUT=selftest-paket timeout 300 "dist/win-unpacked/Yatirim Pusulasi.exe" --selftest 2>&1 | tail -20 | tee -a build.log || echo "paket testi çıkış kodu $?" | tee -a build.log
+          mkdir -p selftest && cp selftest-paket/sonuc.json selftest/sonuc-paket.json 2>/dev/null || true
+      - name: Sürüm etiketi
+        id: v
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          name: Yatırım Pusulası ${{ steps.v.outputs.tag }}
+          body: |
+            Windows kurulum dosyası: aşağıdaki **Yatirim-Pusulasi-Kurulum-….exe** dosyasını indirip çalıştır.
+            İlk kurulumda Windows "bilinmeyen yayıncı" uyarısı gösterirse: Ek bilgi → Yine de çalıştır.
+            1.4.0 ve sonrası yeni sürümleri kendisi indirir; programın üstündeki "Yeniden başlat ve güncelle" düğmesiyle kurulur.
+          files: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest.yml
+          overwrite_files: true
+          make_latest: true
+      - name: Durum raporu
+        if: always()
+        run: |
+          mkdir -p durum && cp build.log durum/ 2>/dev/null || true
+          cp -r selftest/* durum/ 2>/dev/null || true
+          echo "{\"status\":\"${{ job.status }}\",\"tag\":\"${{ steps.v.outputs.tag }}\",\"sha\":\"${GITHUB_SHA}\",\"exe\":\"$(ls dist/*.exe 2>/dev/null | xargs -n1 basename 2>/dev/null)\"}" > durum/durum.json
+          cd durum
+          git init -q -b durum
+          git config user.name "build-bot"
+          git config user.email "build-bot@users.noreply.github.com"
+          git add -A
+          git commit -qm "durum ${GITHUB_RUN_NUMBER}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" durum

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yatırım Pusulası</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="../node_modules/xlsx/dist/xlsx.full.min.js"></script>
+<script>try{const t=localStorage.getItem('tema');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/* VOICE: sakin, net bir masa aracı; bir gazetenin ekonomi grafik masası gibi
+   IDEA: denetim raporu sayfası — önce rakam, sonra bulgu, sonra tablo
+   PICTURE: canlı fiyat grafiği + sinyal kartı; özet ekranında portföy rakamı sarı bloğun üstünde
+   COLOUR and TYPE: beyaz zemin, mürekkep #101418, tek sarı blok #ffd84a, arduvaz; kâr yeşil, zarar kırmızı; Manrope
+   LAYOUT: sekmeli tek sayfa; rakam önde, grafik ortada, tablo altta; 600px altında tek sütun */
+:root{color-scheme:light dark;
+/* Göz yormayan palet: saf beyaz/siyah yok, düşük doygunluk; koyu temada metin kırık beyaz */
+--bg:light-dark(#f4f2ed,#14181d);--card:light-dark(#fbfaf7,#1a1f25);--ink:light-dark(#2b3036,#d5dbe1);--mut:light-dark(#69727c,#8b96a1);
+--line:light-dark(#e2ded5,#29313a);--soft:light-dark(#ebe8e1,#20262d);--y:light-dark(#efe2b8,#3a3424);--yi:light-dark(#2b3036,#efe0b0);--ymut:light-dark(#5e5844,#b9ab84);
+--up:light-dark(#2e7a58,#62bd8f);--dn:light-dark(#b3513f,#df8270);--blue:light-dark(#3a6aa3,#86aedb);
+--btn:light-dark(#3b4550,#c9d1d9);--btni:light-dark(#f7f5f0,#14181d);
+--gold:light-dark(#a8842f,#d3b062);--teal:light-dark(#3d7a80,#74b4ba);--orange:light-dark(#b9763f,#d99a68);--cpi:light-dark(#c07a3a,#d99a68);--shadow:light-dark(rgba(40,35,25,.10),rgba(0,0,0,.35))}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+a{color:var(--ink);text-underline-offset:3px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Manrope,'Segoe UI',system-ui,sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
+.band{padding:clamp(20px,3.4vw,48px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+header.band{padding-bottom:0}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;justify-content:space-between}
+h1{font-size:clamp(28px,3.8vw,40px);line-height:1.05;margin:0;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:24px;line-height:1.15;margin:0 0 14px;font-weight:700;text-wrap:balance}
+h3{font-size:17px;margin:0 0 10px;font-weight:700}
+.mut{color:var(--mut)}.sm{font-size:14px}.xs{font-size:13px}
+.chip{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:4px 12px}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--mut)}.chip.ok i{background:var(--up)}.chip.warn i{background:var(--gold)}
+nav{display:flex;gap:4px;overflow-x:auto;margin-top:20px;border-bottom:1px solid var(--line)}
+nav a{flex:none;padding:12px 16px;min-height:44px;color:var(--mut);text-decoration:none;font-weight:600;border-bottom:3px solid transparent}
+nav a.on{color:var(--ink);border-color:var(--gold)}nav a:hover{color:var(--ink)}
+nav a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+section[data-v]{display:none}section[data-v].on{display:block}
+.grid{display:grid;gap:24px}.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.mini{grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px}
+.mc{display:block;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px 16px 10px;background:var(--card)}
+.mc:hover{border-color:var(--mut)}.mc .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.mc b{font-size:20px}
+.mc svg{display:block;width:100%;height:46px;margin-top:8px;overflow:visible}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+.kpis{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.kpi{padding:18px 20px;border-left:1px solid var(--line)}.kpi:first-child{border:0;background:var(--y);color:var(--yi)}
+.kpi b{display:block;font-size:clamp(22px,2.6vw,30px);line-height:1.15;font-weight:700;white-space:nowrap}
+.kpi:first-child b{font-size:clamp(28px,3.6vw,40px)}.kpi:first-child .mut{color:var(--ymut)}
+@media(max-width:760px){.kpis{grid-template-columns:1fr 1fr}.kpi:first-child{grid-column:1/-1}.kpi:nth-child(3){border-left:1px solid var(--line)}.kpi:nth-child(n+2){border-top:1px solid var(--line)}.kpi:nth-child(2),.kpi:nth-child(4){border-left:0}}
+.up{color:var(--up)}.dn{color:var(--dn)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font-size:13px;font-weight:600;color:var(--mut);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--soft)}
+.tag{display:inline-block;font-size:13px;font-weight:700;padding:2px 9px;border-radius:6px;white-space:nowrap}
+.t-GÜÇLÜAL{background:var(--up);color:var(--card)}.t-AL{color:var(--up);box-shadow:inset 0 0 0 1.5px var(--up)}
+.t-TUT{color:var(--mut);box-shadow:inset 0 0 0 1.5px var(--line)}.t-SAT{color:var(--dn);box-shadow:inset 0 0 0 1.5px var(--dn)}.t-GÜÇLÜSAT{background:var(--dn);color:var(--card)}
+.bar{height:10px;background:var(--soft);border-radius:5px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--blue);opacity:.8}
+.brow{display:grid;grid-template-columns:minmax(0,9em) minmax(0,1fr) 5.5em;gap:12px;align-items:center;padding:6px 0;font-size:15px}
+label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
+textarea{min-height:120px;font-size:14px}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;align-items:end}
+button{font:inherit;font-weight:600;font-size:15px;min-height:44px;padding:0 18px;border-radius:8px;border:1px solid var(--btn);background:var(--btn);color:var(--btni);cursor:pointer;transition:filter .15s}button:hover{filter:brightness(1.08)}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}button.sm{min-height:36px;padding:0 10px;font-size:14px}
+button.x{background:none;border:0;color:var(--mut);min-height:36px;padding:0 8px;font-size:18px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{border:0;border-radius:0;background:transparent;color:var(--mut);min-height:38px;font-size:14px}.seg button.on{background:var(--btn);color:var(--btni)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.fig{position:relative;min-height:360px}.fig.s{min-height:120px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.4;display:none;z-index:2;white-space:nowrap;box-shadow:0 4px 14px var(--shadow)}
+.sig{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.big{font-size:clamp(30px,4vw,44px);font-weight:800;line-height:1}
+.meter{position:relative;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--dn),var(--soft) 50%,var(--up))}
+.meter i{position:absolute;top:-5px;width:4px;height:22px;background:var(--ink);border-radius:2px;transform:translateX(-50%)}
+.lv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:15px}.lv span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+ul.why{margin:0;padding-left:18px;font-size:15px}ul.why li{margin:3px 0}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:12px}
+.rat{border:1px solid var(--line);border-radius:10px;padding:12px 14px}.rat b{display:block;font-size:22px;white-space:nowrap}.rat.g{border-color:var(--up)}.rat.b{border-color:var(--dn)}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:28px;text-align:center}.drop.on{border-color:var(--blue);background:var(--soft)}
+.note{background:var(--soft);border-radius:10px;padding:12px 14px;font-size:14px}
+.empty{padding:28px;text-align:center;color:var(--mut);border:1px dashed var(--line);border-radius:12px}
+.seg button{padding:0 12px}
+.gi{display:grid;grid-template-columns:6.5em minmax(0,1fr);gap:2px 14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}.gi:last-child{border:0}.gi .d{font-weight:700;white-space:nowrap}.gi .s{font-size:13px;color:var(--mut)}.gi .k{font-size:12px;font-weight:700;color:var(--mut);margin-right:6px}
+.news{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:4px 16px;padding:14px 0;border-bottom:1px solid var(--line)}
+.news h3{margin:0 0 4px;font-size:17px;line-height:1.3}.news p{margin:0;font-size:15px}.news .src{font-size:13px;color:var(--mut);margin-top:6px}
+.news .imp{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--dn);margin-right:6px;vertical-align:middle}
+@media(max-width:600px){.news{grid-template-columns:1fr}}
+.stk{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--soft)}.stk i{display:block;height:100%}
+.lgd{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:14px}.lgd a{text-decoration:none;color:var(--ink)}.lgd i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.back{display:inline-block;margin-bottom:12px;font-size:14px;font-weight:600}
+.btn{display:inline-flex;align-items:center;font-weight:600;font-size:15px;min-height:44px;padding:0 18px;border-radius:8px;border:1px solid var(--btn);background:var(--btn);color:var(--btni);text-decoration:none;cursor:pointer}.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--btn);color:var(--btni);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw}
+.toast.on{opacity:1}
+details summary{cursor:pointer;font-weight:600;min-height:32px}
+.thm{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}.thm button{border:0;border-radius:0;background:transparent;color:var(--mut);min-height:32px;padding:0 10px;font-size:13px;font-weight:600}.thm button.on{background:var(--soft);color:var(--ink)}
+.drawer{position:fixed;inset:0;z-index:20;display:none}.drawer.on{display:block}.drawer .sh{position:absolute;inset:0;background:rgba(10,12,14,.38)}
+.drawer .pn{position:absolute;top:0;right:0;bottom:0;width:min(760px,100%);background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 30px var(--shadow);display:flex;flex-direction:column}
+.drawer .hd{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.drawer .bd{padding:18px 22px 40px;overflow:auto;font-size:15px;line-height:1.65}.drawer .bd table{font-size:14px;margin:10px 0}.drawer .bd td,.drawer .bd th{border:1px solid var(--line);padding:6px 8px;white-space:normal}
+.drawer .bd p{margin:0 0 10px}.kapx table{width:100%}.kapx td{vertical-align:top}.kapx table table{margin:0}.drawer .att a{display:inline-block;margin:0 10px 6px 0}
+.gi a[data-det],.news a[data-det]{cursor:pointer}
+pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
+@media(max-width:600px){.card{padding:16px}.fig{min-height:300px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start!important}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mut)}.stack td:empty{display:none}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <div class="top"><h1>Yatırım Pusulası</h1><div class="row"><span class="thm" id="thm" role="group" aria-label="Tema"><button type="button" data-t="light">Açık</button><button type="button" data-t="dark">Koyu</button><button type="button" data-t="auto">Sistem</button></span><span class="xs mut" id="refMsg"></span><button class="ghost sm" id="refBtn" hidden>Verileri güncelle</button><span class="chip" id="st"><i></i><span>Yükleniyor…</span></span></div></div>
+  <nav id="nav">
+    <a href="#ana" data-t="ana">Ana sayfa</a><a href="#fonlar" data-t="fonlar">Fonlar</a><a href="#hisseler" data-t="hisseler">Hisseler</a>
+    <a href="#emtia" data-t="emtia">Emtia</a><a href="#coin" data-t="coin">Coin</a><a href="#plan" data-t="plan">Plan ve risk</a><a href="#dolayli" data-t="dolayli">Dolaylı portföy</a><a href="#radar" data-t="radar">Fırsat radarı</a><a href="#incele" data-t="incele">İncele</a><a href="#veri" data-t="veri">Veri ve ayarlar</a>
+  </nav>
+</div></header>
+
+<main class="band"><div class="wrap">
+
+<section data-v="ana">
+  <div class="kpis" id="kpis"></div>
+  <div class="card" style="margin-top:24px">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Portföyün yekünü</h2>
+      <div class="seg" id="totRng"><button data-r="91">3A</button><button data-r="182">6A</button><button data-r="365">1Y</button><button data-r="99999" class="on">Tümü</button></div></div>
+    <div class="row sm" style="gap:18px;margin-bottom:6px"><span><b>━</b> Portföy değeri</span><span class="mut">━ Yatırılan para</span><span style="color:var(--cpi)">┅ Enflasyonu yakalamak için gereken</span></div>
+    <div class="fig" id="fTot"><svg role="img" aria-label="Portföy toplam değer grafiği"></svg><div class="tip"></div></div>
+    <p class="xs mut" id="totNote" style="margin:8px 0 0"></p>
+    <div id="clsBar" style="margin-top:18px"></div>
+  </div>
+  <div class="grid mini" id="clsMini" style="margin-top:24px"></div>
+  <div class="card" id="dikkat" hidden style="margin-top:24px"></div>
+  <div class="grid g2" style="margin-top:24px">
+    <div class="card"><h3>Yaklaşan</h3><div id="gYak"></div></div>
+    <div class="card"><h3>Son kararlar ve veriler</h3><div id="gSon"></div></div>
+  </div>
+</section>
+
+<section data-v="sinif">
+  <div class="kpis" id="sKpis"></div>
+  <div class="card" id="goldCard" hidden style="margin-top:24px"></div>
+  <details class="card" id="tefasCard" hidden style="margin-top:24px">
+    <summary><h3 style="display:inline">Fon fiyatları · elle yükleme (yedek yol)</h3></summary>
+    <p class="sm mut" style="margin-top:0">Fon fiyatları TEFAS'tan otomatik çekilir (üstteki <b>Güncelle</b>, açılışta ve her akşam). TEFAS servisi yanıt vermezse fiyatları elle de yükleyebilirsin: Tarihsel Veriler sayfasını aç, fonlarını ve tarih aralığını seç (ilk seferde son 1–2 yıl, sonra son birkaç hafta yeterli), <b>Excel'e Aktar</b> ile indir ve dosyayı buraya bırak.</p>
+    <div class="row"><a class="btn" href="https://www.tefas.gov.tr/TarihselVeriler.aspx" target="_blank" rel="noopener">TEFAS Tarihsel Veriler'i aç</a><label class="btn ghost" for="tefasFile">Excel dosyasını seç</label><input type="file" id="tefasFile" accept=".xlsx,.xls,.csv" hidden></div>
+    <div class="drop" id="tefasDrop" style="margin-top:12px;padding:18px">İndirdiğin Excel dosyasını buraya bırak</div>
+    <p class="sm" id="tefasMsg" style="margin:10px 0 0"></p>
+  </details>
+  <h2 style="margin-top:28px">Sinyaller</h2>
+  <div class="scroll" id="sSig"></div>
+  <h2 style="margin-top:28px">Bildirimler</h2>
+  <div id="sNews"></div>
+  <h2 style="margin-top:28px">Pozisyonlar</h2>
+  <div class="scroll" id="posTable"></div>
+  <div id="infBox" style="margin-top:32px"></div>
+  <div class="card" style="margin-top:28px">
+    <h3 id="txTitle">İşlem ekle</h3>
+    <form id="txForm" class="form">
+      <div><label for="txSym">Sembol</label><input id="txSym" list="symList" required autocomplete="off" placeholder="THYAO"></div>
+      <div><label for="txType">Tür</label><select id="txType"><option value="hisse">Hisse</option><option value="fon">Fon</option><option value="emtia">Emtia</option><option value="coin">Coin</option></select></div>
+      <div><label for="txSide">İşlem</label><select id="txSide"><option>AL</option><option>SAT</option></select></div>
+      <div><label for="txDate">Tarih</label><input id="txDate" type="date" required></div>
+      <div><label for="txQty">Adet</label><input id="txQty" inputmode="decimal" required placeholder="100"></div>
+      <div><label for="txPrice">Fiyat</label><input id="txPrice" inputmode="decimal" required placeholder="312,50"></div>
+      <div><label for="txFee">Komisyon</label><input id="txFee" inputmode="decimal" placeholder="0"></div>
+      <div style="grid-column:1/-1"><label for="txNote">Neden? <span class="xs mut">(yatırım günlüğü, isteğe bağlı)</span></label><input id="txNote" placeholder="ör. Fırsat radarında sektörüne göre %40 iskontolu; ilk çeyrek kârı güçlü"></div>
+      <div style="grid-column:1/-1"><label for="txExit">Ne olursa satarım / gözden geçiririm?</label><input id="txExit" placeholder="ör. İki çeyrek üst üste kâr düşerse ya da F/K 12'yi geçerse"></div>
+      <div><label for="txRev">Gözden geçirme tarihi</label><input id="txRev" type="date"></div>
+      <div class="row" style="gap:8px"><button type="submit" id="txBtn">Kaydet</button><button type="button" class="ghost" id="txCancel" hidden>Vazgeç</button></div>
+    </form>
+    <datalist id="symList"></datalist>
+  </div>
+  <details id="txHist" style="margin-top:28px"><summary id="txSum">İşlem geçmişi</summary><div class="scroll" id="txTable" style="margin-top:10px"></div></details>
+</section>
+
+<section data-v="analiz">
+  <a class="back" id="aBack" href="#ana">← Geri</a>
+  <div class="row" style="justify-content:space-between;margin-bottom:16px">
+    <div class="row"><label for="aSel" style="margin:0">Varlık</label><select id="aSel" style="width:auto;min-width:200px"></select></div>
+    <div class="seg" id="rng"><button data-r="66">3A</button><button data-r="130">6A</button><button data-r="260" class="on">1Y</button><button data-r="99999">Tümü</button></div>
+  </div>
+  <div id="aBody"></div>
+</section>
+
+<section data-v="mali">
+  <a class="back" href="#hisseler">← Hisseler</a>
+  <div class="row" style="margin-bottom:16px"><label for="mSel" style="margin:0">Hisse</label><select id="mSel" style="width:auto;min-width:200px"></select></div>
+  <div id="mBody"></div>
+</section>
+
+<section data-v="dolayli">
+  <div id="dBody"></div>
+  <details class="card" style="margin-top:28px">
+    <summary><h3 style="display:inline">Fon içeriğini elle gir veya düzelt</h3></summary>
+    <p class="sm mut">Fonların içeriği her ay KAP'taki <b>Portföy Dağılım Raporu</b>ndan otomatik okunur. Rapor okunamazsa ya da başka bir kaynak kullanmak istersen varlık listesini buraya yapıştır. Başlık satırında en az <b>Ad</b> (veya <b>Kod</b>/ISIN) ve <b>Ağırlık</b> olmalı; <b>Tür</b>, <b>Ülke</b>, <b>Sektör</b> isteğe bağlı. Ağırlık %15 ya da 0,15 olabilir.</p>
+    <div class="form" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+      <div><label for="hFund">Fon</label><input id="hFund" list="fundList" placeholder="AFT"></div>
+      <div><label for="hDate">Rapor tarihi</label><input id="hDate" type="date"></div>
+    </div>
+    <datalist id="fundList"></datalist>
+    <label for="hTxt" style="margin-top:12px">Varlık listesi (başlık satırıyla)</label>
+    <textarea id="hTxt" placeholder="Kod&#9;Ad&#9;Tür&#9;Ağırlık&#10;US67066G1040&#9;NVIDIA CORP&#9;Yabancı Hisse&#9;%12,4"></textarea>
+    <div class="row" style="margin-top:10px"><button id="hBtn">Fon içeriğini kaydet</button><span class="xs mut" id="hMsg"></span></div>
+  </details>
+</section>
+
+<section data-v="plan">
+  <h2 style="margin:0">Plan ve risk</h2>
+  <p class="sm mut" style="margin:6px 0 0">Gerçek getirin, hedef dağılımın, aylık alım planın, riskler ve kararlarının takibi. Hesaplar bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.</p>
+
+  <div class="card" style="margin-top:22px"><h3>Getirin ne kadar iyi? <span class="xs mut" id="bmAt"></span></h3>
+    <p class="sm mut" style="margin-top:0">Para ağırlıklı yıllık getiri (XIRR): her alım ve satışın tarihini hesaba katar. Aynı tutarları aynı günlerde dolara, gram altına, BIST 100'e ya da mevduata koysaydın bugün ne olurdu?</p>
+    <div class="row" style="gap:10px;margin-bottom:10px"><label for="depRate" class="sm" style="margin:0">Mevduat karşılaştırması: net yıllık %</label><input id="depRate" inputmode="decimal" style="width:90px" placeholder="36"><span class="xs mut">Ekim 2026'da TL mevduatın ağırlıklı ortalama brüt faizi ~%43'tü; stopaj sonrası yaklaşık %36.</span></div>
+    <div class="scroll"><table id="bmTable"></table></div>
+    <p class="xs mut" id="bmNote" style="margin:8px 0 0"></p>
+  </div>
+
+  <div class="card" style="margin-top:22px"><h3>Hedef dağılım ve aylık alım planı</h3>
+    <p class="sm mut" style="margin-top:0">Her varlık sınıfı için hedef yüzdeni yaz (toplam 100). Aylık ayıracağın tutarı girince, hiçbir şey satmadan dağılımı hedefe yaklaştıracak alımı önerir.</p>
+    <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end" id="tgForm"></div>
+    <div class="scroll" style="margin-top:14px"><table id="tgTable"></table></div>
+    <div id="dcaBox" style="margin-top:16px"></div>
+  </div>
+
+  <div class="card" style="margin-top:22px"><h3>Riskler</h3>
+    <div id="riskWarn"></div>
+    <div class="grid g3" style="margin-top:14px" id="riskStats"></div>
+    <h3 style="margin-top:20px">Senaryo testi</h3>
+    <p class="sm mut" style="margin-top:0">Fonların içi dahil (dolaylı portföy) bugünkü dağılımına göre kaba bir tahmin. Diğer her şeyin sabit kaldığı varsayılır.</p>
+    <div class="scroll"><table id="scTable"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:22px"><h3>Fonların vergi sonrası durumu</h3>
+    <p class="sm mut" style="margin-top:0">Fon kazançları satışta stopaja tabi olabilir; oran fon türüne ve alış tarihine göre değişir (hisse yoğun fonlarda genelde %0). Fonun izahnamesinden ya da aracı kurumundan öğrendiğin oranı yaz.</p>
+    <div class="scroll"><table id="taxTable"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:22px"><h3>Yatırım günlüğü</h3>
+    <p class="sm mut" style="margin-top:0">İşlem eklerken yazdığın "neden" ve "ne olursa satarım" notları. Gözden geçirme tarihi gelenler üstte; ana sayfada da hatırlatılır.</p>
+    <div id="jrBox"></div>
+  </div>
+
+  <div class="card" style="margin-top:22px"><h3>Fiyat alarmları</h3>
+    <p class="sm mut" style="margin-top:0">Fiyat seviyeyi geçince masaüstü bildirimi gelir (her güncellemede kontrol edilir). Ayrıca portföyündeki hisse ve fonlar için yeni KAP bildirimleri de bildirim olarak gelir.</p>
+    <form class="row" id="alForm" style="gap:10px;flex-wrap:wrap;align-items:flex-end"><div><label for="alSym">Varlık</label><select id="alSym"></select></div><div><label for="alDir">Koşul</label><select id="alDir"><option value="ust">üstüne çıkarsa</option><option value="alt">altına düşerse</option></select></div><div><label for="alPx">Fiyat (TL)</label><input id="alPx" inputmode="decimal" style="width:130px" required></div><button type="submit">Alarm ekle</button></form>
+    <div class="scroll" style="margin-top:12px"><table id="alTable"></table></div>
+  </div>
+</section>
+
+<section data-v="radar">
+  <div class="row" style="justify-content:space-between;align-items:flex-end;gap:16px">
+    <div><h2 style="margin:0">Fırsat radarı</h2><p class="sm mut" id="rdInfo" style="margin:6px 0 0"></p></div>
+    <button class="ghost" id="rdBtn" type="button">Radarı güncelle</button>
+  </div>
+  <div class="card" style="margin-top:20px">
+    <div class="row" style="gap:12px;flex-wrap:wrap;align-items:center">
+      <div class="seg" id="rdUni" role="group" aria-label="Evren"><button type="button" data-u="top" class="on">En büyük 100</button><button type="button" data-u="all">Tüm BIST</button></div>
+      <div class="seg" id="rdPre" role="group" aria-label="Hazır filtre" style="flex-wrap:wrap">
+        <button type="button" data-p="skor" class="on">Ucuzluk skoru</button><button type="button" data-p="sektor">Sektörüne göre iskontolu</button><button type="button" data-p="kalite">Ucuz + kârlı</button><button type="button" data-p="dusen">Zirveden uzak</button><button type="button" data-p="rsi">Aşırı satım</button>
+      </div>
+      <select id="rdSek" aria-label="Sektör" style="min-height:40px"><option value="">Tüm sektörler</option></select>
+    </div>
+    <p class="xs mut" id="rdDesc" style="margin:12px 0 0"></p>
+  </div>
+  <div class="scroll" style="margin-top:16px"><table id="rdTable"></table></div>
+  <p class="xs mut" style="margin-top:14px">ROE* yaklaşık özkaynak kârlılığıdır (PD/DD ÷ F/K). Bankalarda FD/FAVÖK hesaplanmaz; skorları F/K, PD/DD ve ROE'ye dayanır. Radar bir tarama aracıdır, yatırım tavsiyesi değildir. Düşük çarpan tek başına ucuzluk göstermez: tek seferlik kârlar, enflasyon muhasebesi, borçluluk ve sektörün yapısı (banka, holding, GYO) çarpanları bozabilir. Listeden ilgini çekeni <b>Takibe al</b> ile Hisseler sekmesine ekleyip mali tablolarını ve teknik görünümünü incele.</p>
+</section>
+
+<section data-v="incele">
+  <h2 style="margin:0">İncele ve takip et</h2>
+  <p class="sm mut" style="margin:6px 0 0">Portföyünde olmayan bir hisseyi (BIST ya da ABD), coini, fonu veya emtiayı getir; grafik, teknik sinyal, mali tablo ve rasyolarını portföyündekiler gibi gör. Takip listesindekiler portföy toplamına girmez.</p>
+  <form class="card" id="inForm" style="margin-top:20px" autocomplete="off">
+    <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1 1 200px"><label for="inSym">Sembol</label><input id="inSym" placeholder="THYAO, NVDA, ASML.AS, BTC, AFT…" style="text-transform:uppercase" required></div>
+      <div><label for="inMkt">Piyasa</label><select id="inMkt"><option value="auto">Otomatik</option><option value="bist">BIST hisse</option><option value="us">Yabancı hisse (ABD, Avrupa…)</option><option value="coin">Coin</option><option value="fon">Fon (TEFAS)</option><option value="emtia">Emtia / altın birimi</option></select></div>
+      <button type="submit" id="inBtn">Getir</button>
+    </div>
+    <p class="xs mut" id="inMsg" style="margin:10px 0 0">Yabancı hisselerde Yahoo sembolünü yaz (NVDA, AAPL; Avrupa için ASML.AS, SAP.DE gibi). Fiyat kendi para biriminden TL'ye çevrilir; mali tablolar son ~5 çeyrek ve 4 yıl için Yahoo'dan gelir (güncel kurla TL, dönemler şirketin mali yılına göre).</p>
+  </form>
+  <div class="scroll" style="margin-top:20px"><table id="inTable"></table></div>
+</section>
+
+<section data-v="veri">
+  <div class="grid g2">
+    <div class="card">
+      <h3>Excel'den toplu yükleme</h3>
+      <p class="sm mut" style="margin-top:0">Şablondaki sayfalar: <b>Islemler</b>, <b>Varliklar</b>, <b>Fiyatlar</b>, <b>Mali</b>, <b>Fon_Icerik</b>. Hangisi varsa o okunur. Başka adlı bir sayfa (ör. <b>THYAO</b>) tarih/kapanış sütunları içeriyorsa o sembolün fiyat geçmişi sayılır; investing.com ve TEFAS çıktıları doğrudan okunur.</p>
+      <div class="drop" id="drop"><p style="margin:0 0 10px">.xlsx veya .csv dosyasını buraya bırak</p><input type="file" id="file" accept=".xlsx,.xls,.csv,.txt" style="max-width:320px;margin:auto"></div>
+      <div id="impPrev" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <h3>Tek varlığa fiyat geçmişi yapıştır</h3>
+      <div class="form" style="grid-template-columns:1fr 1fr"><div><label for="pSym">Sembol</label><input id="pSym" list="symList" placeholder="XAU/TRY"></div>
+      <div><label for="pType">Tür (yeniyse)</label><select id="pType"><option value="hisse">Hisse</option><option value="fon">Fon</option><option value="emtia">Emtia</option><option value="coin">Coin</option></select></div></div>
+      <label for="pTxt" style="margin-top:12px">Excel'den kopyalanmış satırlar (başlık satırıyla)</label>
+      <textarea id="pTxt" placeholder="Tarih&#9;Açılış&#9;Yüksek&#9;Düşük&#9;Kapanış&#9;Hacim"></textarea>
+      <div class="row" style="margin-top:10px"><button id="pBtn">Fiyatları ekle</button><span class="xs mut" id="pMsg"></span></div>
+    </div>
+    <div class="card">
+      <h3>Son fiyatları hızlı güncelle</h3>
+      <p class="sm mut" style="margin-top:0">Her satıra bir varlık: <code>THYAO 312,50</code>. Bugünün tarihiyle fiyat geçmişine de eklenir.</p>
+      <textarea id="qTxt" placeholder="THYAO 312,50&#10;GLDTR 9,84&#10;BTC 3.950.000"></textarea>
+      <div class="row" style="margin-top:10px"><button id="qBtn">Güncelle</button><span class="xs mut" id="qMsg"></span></div>
+    </div>
+    <div class="card" id="deskCard" hidden>
+      <h3>Masaüstü program</h3>
+      <p class="sm mut" style="margin-top:0">Portföy verilerin yalnızca bu bilgisayarda saklanır ve her gün otomatik yedeklenir. Fon fiyatları TEFAS'tan; hisse, altın, gümüş, coin ve dolar kuru Yahoo Finance'ten; şirket bildirimleri KAP'tan; hisselerin mali tabloları (KAP'a bildirilen finansal raporlar) İş Yatırım'ın mali tablo servisinden otomatik çekilir. Yeni bir hisse eklediğinde son 12 çeyreğin tabloları hemen gelir. Program açılışta ve her akşam 19:00'dan sonra kendini günceller.</p>
+      <label class="row" style="font-weight:600;gap:10px"><input type="checkbox" id="deskLogin" style="width:20px;min-height:20px"> Windows açılışında arka planda başlat (akşam güncellemesi için)</label>
+      <div class="row" style="margin-top:12px"><button class="ghost" id="deskFolder">Veri klasörünü aç</button><button class="ghost" id="updChk" type="button">Güncellemeleri denetle</button><span class="xs mut" id="deskVer"></span></div>
+      <h3 style="margin-top:20px">İkinci yedek (bulut klasörü)</h3>
+      <p class="sm mut" style="margin-top:0">OneDrive ya da Google Drive klasörünü seçersen veri dosyan oraya da kopyalanır: <b>YatirimPusulasi/pusula-veri.json</b> (güncel) ve son 30 günün günlük kopyaları. Bilgisayar bozulursa veri kaybolmaz; ileride telefondan erişimin de temeli olur.</p>
+      <div class="row" style="gap:10px"><button class="ghost" id="bkPick" type="button">Yedek klasörü seç</button><button class="ghost" id="bkNow" type="button" hidden>Şimdi yedekle</button><span class="xs mut" id="bkInfo"></span></div>
+      <div id="deskErr" class="xs" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h3>Excel'e aktar</h3>
+      <p class="sm mut" style="margin-top:0">Portföy, işlemler (günlük notlarıyla), hisselerin mali tabloları ve fon içerikleri tek bir Excel dosyasında.</p>
+      <button class="ghost" id="xlsOut" type="button">Excel dosyası oluştur</button>
+    </div>
+    <div class="card">
+      <h3>Enflasyon (TÜFE, aylık %)</h3>
+      <p class="sm mut" style="margin-top:0">TÜİK her ayın 3'ünde bir önceki ayın verisini açıklar. Her satıra bir ay: <code>2026-10 2,58</code>. Enflasyon karşılaştırması bu tabloya göre yapılır.</p>
+      <textarea id="cpiTxt" style="min-height:160px"></textarea>
+      <div class="row" style="margin-top:10px"><button id="cpiBtn">Enflasyon tablosunu kaydet</button><span class="xs mut" id="cpiMsg"></span></div>
+    </div>
+    <div class="card">
+      <h3>Ayarlar</h3>
+      <div class="form" style="grid-template-columns:1fr 1fr">
+        <div><label for="rf">Risksiz faiz, yıllık %</label><input id="rf" inputmode="decimal" placeholder="ör. TCMB politika faizi"></div>
+        <div><label for="infl">Yıllık enflasyon %</label><input id="infl" inputmode="decimal" placeholder="teknik analizde reel getiri için"></div>
+      </div>
+      <p class="xs mut">Sharpe ve Sortino oranları risksiz faize göre, reel getiri enflasyona göre hesaplanır. Boş bırakırsan 0 kabul edilir.</p>
+      <h3 style="margin-top:18px">Yedek</h3>
+      <div class="row"><button class="ghost" id="bkCopy">Tüm veriyi JSON olarak kopyala</button><button class="ghost" id="bkLoad">Yapıştırılan yedeği yükle</button></div>
+      <textarea id="bkTxt" style="margin-top:10px;min-height:80px" placeholder="Yedek JSON'u buraya yapıştır"></textarea>
+      <div class="row" style="margin-top:10px"><button class="ghost" id="wipe">Tüm veriyi sil</button><span class="xs mut" id="wipeMsg"></span></div>
+    </div>
+  </div>
+</section>
+
+<p class="xs mut" style="margin-top:40px">Sinyaller kurallara dayalı göstergelerdir; yatırım tavsiyesi değildir. Veriler senin yüklediğin dosyalardan ve girdiğin işlemlerden gelir.</p>
+</div></main>
+<div class="toast" id="toast"></div>
+<div id="upd" hidden style="position:fixed;right:20px;bottom:20px;z-index:15;background:var(--card);border:1px solid var(--line);box-shadow:0 6px 24px var(--shadow);border-radius:12px;padding:14px 16px;max-width:340px"><div class="sm" id="updMsg"></div><div class="row" style="gap:8px;margin-top:10px"><button class="sm" id="updGo" type="button">Yeniden başlat ve güncelle</button><button class="ghost sm" id="updLater" type="button">Sonra</button></div></div>
+<div class="drawer" id="det" aria-hidden="true"><div class="sh" data-close></div><div class="pn" role="dialog" aria-modal="true" aria-labelledby="detT">
+  <div class="hd"><div><div class="xs mut" id="detM"></div><h2 id="detT" style="margin:4px 0 0;font-size:20px"></h2></div><button class="ghost sm" data-close aria-label="Kapat">Kapat</button></div>
+  <div class="bd" id="detB"></div></div></div>
+<script src="shim.js"></script>
+<script src="calc.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

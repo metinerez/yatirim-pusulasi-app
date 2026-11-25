@@ -1,0 +1,94 @@
+{
+ "settings": {
+  "cpi": {
+   "m": {
+    "2025-11": 0.87,
+    "2025-12": 0.89,
+    "2026-01": 4.84,
+    "2026-02": 2.96,
+    "2026-03": 1.94,
+    "2026-04": 4.18,
+    "2026-05": 1.71,
+    "2026-06": 0.99,
+    "2026-07": 1.78,
+    "2026-08": 1.84,
+    "2026-09": 1.84,
+    "2026-10": 2.58
+   },
+   "updated": "2026-11-24",
+   "src": "TÜİK aylık TÜFE değişimi"
+  },
+  "main": {
+   "rf": "",
+   "infl": ""
+  }
+ },
+ "news": {
+  "m20261022-tcmb": {
+   "d": "2026-10-22",
+   "t": "TCMB politika faizini %37'den %36'ya indirdi",
+   "s": "Milliyet",
+   "u": "https://www.milliyet.com.tr/haber/7685697/",
+   "kat": "makro",
+   "tip": "karar"
+  },
+  "m20261028-fed": {
+   "d": "2026-10-28",
+   "t": "Fed faizi sabit tuttu; iki üye artış istedi",
+   "s": "NTV",
+   "u": "https://www.ntv.com.tr/ntvpara/fed-faiz-kararini-acikladi-1748373",
+   "kat": "makro",
+   "tip": "karar"
+  },
+  "m20261103-tufe": {
+   "d": "2026-11-03",
+   "t": "Ekim enflasyonu: aylık %2,58, yıllık %29,77",
+   "s": "Strateji ve Bütçe Başkanlığı",
+   "u": "https://www.sbb.gov.tr/?p=65672",
+   "kat": "makro",
+   "tip": "veri"
+  },
+  "m20261112-tcmb-rapor": {
+   "d": "2026-11-12",
+   "t": "TCMB yıl sonu enflasyon tahmini %29,5",
+   "s": "Alomaliye",
+   "u": "https://www.alomaliye.com/2026/11/12/tcmbnin-yil-sonu-enflasyon-tahmini-yuzde-29-5/",
+   "kat": "makro",
+   "tip": "veri"
+  },
+  "m20261118-fed-tutanak": {
+   "d": "2026-11-18",
+   "t": "Fed tutanakları: Aralıkta faiz artırımı sinyali",
+   "s": "Haberkenti",
+   "u": "https://www.haberkenti.com/fed-faiz-karari-aciklandi-mi-aralik-ayinda-faiz-artisi-sinyali-2027-oncesi-dikkat-ceken-mesaj",
+   "kat": "makro",
+   "tip": "veri"
+  },
+  "m20261203-tufe": {
+   "d": "2026-12-03",
+   "t": "TÜİK Kasım enflasyonu, saat 10:00",
+   "s": "Milliyet Uzmanpara",
+   "u": "https://uzmanpara.milliyet.com.tr/uzmanpara/kasim-ayi-tefe-tufe-2o26-enflasyon-beklentisi-kasim-enflasyonu-ne-zaman-aciklanacak-beklenti-yuzde-kac-7703569",
+   "kat": "makro",
+   "tip": "takvim"
+  },
+  "m20261209-fed": {
+   "d": "2026-12-09",
+   "t": "Fed faiz kararı, Türkiye saatiyle 22:00",
+   "s": "Federal Reserve",
+   "u": "https://www.federalreserve.gov/newsevents/2026-december.htm",
+   "kat": "makro",
+   "tip": "takvim"
+  },
+  "m20261210-tcmb": {
+   "d": "2026-12-10",
+   "t": "TCMB faiz kararı (yılın son PPK toplantısı)",
+   "s": "Bigpara",
+   "u": "https://bigpara.hurriyet.com.tr/haberler/ekonomi-haberleri/ayni-faizle-yola-devam_ID102245945/",
+   "kat": "makro",
+   "tip": "takvim"
+  }
+ },
+ "assets": {},
+ "txns": {}
+}

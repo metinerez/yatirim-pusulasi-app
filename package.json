@@ -1,0 +1,68 @@
+{
+  "name": "yatirim-pusulasi",
+  "productName": "Yatirim Pusulasi",
+  "version": "1.4.1",
+  "description": "Kişisel yatırım pusulası: fon, hisse, emtia ve coin portföy takibi",
+  "author": "metinerez",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "selftest": "electron . --selftest",
+    "dist": "electron-builder --win nsis --x64 --publish never"
+  },
+  "dependencies": {
+    "xlsx": "0.18.5",
+    "pdfjs-dist": "4.10.38",
+    "electron-updater": "6.3.9"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.metinerez.yatirimpusulasi",
+    "productName": "Yatirim Pusulasi",
+    "files": [
+      "main.js",
+      "preload.js",
+      "sources.js",
+      "pdr.js",
+      "renderer/**",
+      "data/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "Yatirim-Pusulasi-Kurulum-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Yatırım Pusulası",
+      "uninstallDisplayName": "Yatırım Pusulası"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "metinerez",
+        "repo": "yatirim-pusulasi-app",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
