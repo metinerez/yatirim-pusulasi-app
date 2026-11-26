@@ -110,6 +110,13 @@ ipcMain.handle('detail', async (e, index) => {
   if (detCache.has(index)) return detCache.get(index);
   const d = await sources.kapDetail(index); detCache.set(index, d); return d;
 });
+// Genel güvenlik: hiçbir pencere uzak sayfaya gitmesin, yeni pencere açmasın, izin (kamera, konum…) istemesin
+app.on('web-contents-created', (e, wc) => {
+  wc.on('will-attach-webview', ev => ev.preventDefault());
+  wc.on('will-navigate', (ev, url) => { if (!url.startsWith('file://')) { ev.preventDefault(); if (/^https:\/\//.test(url)) shell.openExternal(url); } });
+  wc.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+});
+app.whenReady().then(() => { try { require('electron').session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(perm === 'notifications')); } catch (e) { } });
 function viewer(file, title) {
   const w = new BrowserWindow({ width: 1000, height: 860, title, icon: path.join(__dirname, 'build', 'icon.png'), autoHideMenuBar: true, parent: win || undefined,
     webPreferences: { plugins: true, contextIsolation: true, nodeIntegration: false, sandbox: true } });

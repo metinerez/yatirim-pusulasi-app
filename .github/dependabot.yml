@@ -1,0 +1,17 @@
+# Güvenlik ve bakım: GitHub Actions ve npm bağımlılıkları için haftalık güncelleme önerileri
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    ignore:
+      # büyük sürüm atlamaları elle, test edilerek yapılır
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
