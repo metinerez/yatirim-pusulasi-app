@@ -92,6 +92,9 @@ ul.why{margin:0;padding-left:18px;font-size:15px}ul.why li{margin:3px 0}
 .lg{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .pio{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:6px 16px;font-size:14px}
 .why.g li::marker{color:var(--up)}.why.b li::marker{color:var(--dn)}
+.chk{display:grid;gap:8px}.chk label{display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:400;margin:0}.chk input{width:18px;height:18px;margin-top:2px;flex:none}
+.rpk{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:12px}.rpk>div{background:var(--soft);border-radius:10px;padding:12px 14px}.rpk b{display:block;font-size:21px}
+@media print{header,#nav,.noprint,#upd,#det,.toast,footer{display:none!important}body{background:#fff!important;color:#000}.card{box-shadow:none!important;border:1px solid #ccc;break-inside:avoid}main.band{padding:0}}
 .note{background:var(--soft);border-radius:10px;padding:12px 14px;font-size:14px}
 .empty{padding:28px;text-align:center;color:var(--mut);border:1px dashed var(--line);border-radius:12px}
 .seg button{padding:0 12px}
@@ -126,7 +129,7 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
   <div class="top"><h1>Yatırım Pusulası</h1><div class="row"><span class="thm" id="thm" role="group" aria-label="Tema"><button type="button" data-t="light">Açık</button><button type="button" data-t="dark">Koyu</button><button type="button" data-t="auto">Sistem</button></span><span class="xs mut" id="refMsg"></span><button class="ghost sm" id="refBtn" hidden>Verileri güncelle</button><span class="chip" id="st"><i></i><span>Yükleniyor…</span></span></div></div>
   <nav id="nav">
     <a href="#ana" data-t="ana">Ana sayfa</a><a href="#fonlar" data-t="fonlar">Fonlar</a><a href="#hisseler" data-t="hisseler">Hisseler</a>
-    <a href="#emtia" data-t="emtia">Emtia</a><a href="#coin" data-t="coin">Coin</a><a href="#plan" data-t="plan">Plan ve risk</a><a href="#dolayli" data-t="dolayli">Dolaylı portföy</a><a href="#radar" data-t="radar">Fırsat radarı</a><a href="#incele" data-t="incele">İncele</a><a href="#veri" data-t="veri">Veri ve ayarlar</a>
+    <a href="#emtia" data-t="emtia">Emtia</a><a href="#coin" data-t="coin">Coin</a><a href="#plan" data-t="plan">Plan ve risk</a><a href="#dolayli" data-t="dolayli">Dolaylı portföy</a><a href="#radar" data-t="radar">Fırsat radarı</a><a href="#fonsec" data-t="fonsec">Fon seçici</a><a href="#incele" data-t="incele">İncele</a><a href="#vergi" data-t="vergi">Vergi</a><a href="#veri" data-t="veri">Veri ve ayarlar</a>
   </nav>
 </div></header>
 
@@ -180,11 +183,58 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
       <div style="grid-column:1/-1"><label for="txNote">Neden? <span class="xs mut">(yatırım günlüğü, isteğe bağlı)</span></label><input id="txNote" placeholder="ör. Fırsat radarında sektörüne göre %40 iskontolu; ilk çeyrek kârı güçlü"></div>
       <div style="grid-column:1/-1"><label for="txExit">Ne olursa satarım / gözden geçiririm?</label><input id="txExit" placeholder="ör. İki çeyrek üst üste kâr düşerse ya da F/K 12'yi geçerse"></div>
       <div><label for="txRev">Gözden geçirme tarihi</label><input id="txRev" type="date"></div>
+      <details id="txChk" style="grid-column:1/-1"><summary class="sm">Alım öncesi kontrol listesi <span class="xs mut" id="txChkN"></span></summary>
+        <div id="txInfo" class="note sm" style="margin:10px 0" hidden></div>
+        <div class="chk">
+          <label><input type="checkbox" data-chk="0"> Bu varlığın ne olduğunu (neye yatırım yaptığını) bir cümleyle anlatabilirim.</label>
+          <label><input type="checkbox" data-chk="1"> Neden şimdi aldığımı yukarıya yazdım; birinin tavsiyesi ya da sosyal medya heyecanı değil.</label>
+          <label><input type="checkbox" data-chk="2"> Ne olursa satacağımı ya da yeniden düşüneceğimi biliyorum.</label>
+          <label><input type="checkbox" data-chk="3"> Bu alımdan sonra tek bir varlık portföyümün %10'unu, sınıfı da hedefimi fazla aşmıyor.</label>
+          <label><input type="checkbox" data-chk="4"> Bu paraya en az 1 yıl ihtiyacım olmayacak; acil durum birikimim ayrı.</label>
+        </div></details>
       <div class="row" style="gap:8px"><button type="submit" id="txBtn">Kaydet</button><button type="button" class="ghost" id="txCancel" hidden>Vazgeç</button></div>
     </form>
     <datalist id="symList"></datalist>
   </div>
   <details id="txHist" style="margin-top:28px"><summary id="txSum">İşlem geçmişi</summary><div class="scroll" id="txTable" style="margin-top:10px"></div></details>
+</section>
+
+<section data-v="fonsec">
+  <div class="row" style="justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"><div><h2 style="margin:0">Fon seçici</h2>
+  <p class="sm mut" style="margin:6px 0 0" id="fsInfo"></p></div></div>
+  <div class="card" style="margin-top:18px"><h3>Senin fonların: enflasyonu ve mevduatı yeniyor mu?</h3><div id="fsMine"></div></div>
+  <div class="card" style="margin-top:22px">
+    <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div><label for="fsTip">Fon tipi</label><select id="fsTip"><option value="YAT">Yatırım fonları</option><option value="EMK">Emeklilik (BES) fonları</option></select></div>
+      <div><label for="fsTur">Şemsiye türü</label><select id="fsTur"><option value="">Tümü</option></select></div>
+      <div><label for="fsRisk">En yüksek risk</label><select id="fsRisk"><option value="7">7 (hepsi)</option><option value="6">6</option><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></div>
+      <div><label for="fsQ">Ara (kod, kurucu, ad)</label><input id="fsQ" placeholder="ör. altın, teknoloji, İş Portföy" style="width:240px"></div>
+    </div>
+    <div class="scroll" style="margin-top:14px"><table id="fsTable"></table></div>
+    <p class="xs mut" style="margin-top:12px">Kaynak: TEFAS (yalnız TEFAS'ta işlem gören fonlar). Reel getiri, son 12 ayın TÜFE'siyle hesaplanır. Risk değeri 1 (en düşük) – 7 (en yüksek). Geçmiş getiri geleceğin göstergesi değildir; kısa dönem birinciler çoğu zaman ertesi yıl ortalamaya döner. Yönetim ücreti ve stopaj oranı için fonun KAP sayfasına bak. Seçtiğin fonu <b>Takibe al</b> ile İncele sekmesine ekleyip fiyat grafiğini ve içeriğini görebilirsin.</p>
+  </div>
+</section>
+
+<section data-v="vergi">
+  <h2 style="margin:0">Vergi ve beyan özeti</h2>
+  <p class="sm mut" style="margin:6px 0 0">Girdiğin işlemlerden tahmini bir özet çıkarır; resmi beyanname yerine geçmez. Beyandan önce aracı kurumunun yıllık dökümüyle karşılaştır, emin olmadığın konuda mali müşavire danış.</p>
+  <div class="row" style="gap:12px;margin-top:16px;align-items:flex-end;flex-wrap:wrap"><div><label for="vgYil">Vergi yılı</label><select id="vgYil"></select></div><span class="sm mut" id="vgDue"></span></div>
+  <div class="card" style="margin-top:18px"><h3>Yurt dışı hisse satış kazançları</h3>
+    <p class="sm mut" style="margin-top:0">Yurt dışı borsalardaki hisselerin satış kazancı tutarı ne olursa olsun yıllık gelir vergisi beyannamesiyle beyan edilir (istisna ve beyan sınırı yoktur). Satılan paylar ilk alınandan başlayarak eşleştirilir (FIFO). Alış ile satış arasında Yİ-ÜFE artışı %10 veya üzerindeyse alış bedeli bu oranda artırılır (alış ayı dahil, satış ayı hariç).</p>
+    <div class="scroll"><table id="vgFor"></table></div><p class="xs mut" id="vgForNote" style="margin:8px 0 0"></p>
+  </div>
+  <div class="card" style="margin-top:22px"><h3>Temettüler</h3><div id="vgDiv"></div></div>
+  <div class="card" style="margin-top:22px"><h3>Tahmini vergi</h3><div id="vgSum"></div></div>
+  <div class="card" style="margin-top:22px"><h3>Fonların vergi sonrası durumu</h3>
+    <p class="sm mut" style="margin-top:0">Fon kazançları satışta stopaja tabi olabilir; oran fon türüne ve alış tarihine göre değişir (hisse yoğun fonlarda genelde %0). Fonun izahnamesinden ya da aracı kurumundan öğrendiğin oranı yaz.</p>
+    <div class="scroll"><table id="taxTable"></table></div>
+  <div class="card" style="margin-top:22px"><h3>BIST hisseleri</h3><p class="sm" style="margin:0">Borsa İstanbul'da işlem gören hisselerin alım-satım kazancı bireysel yatırımcı için şu an %0 stopaja tabidir ve beyan edilmez. BIST temettülerinden şirket %15 stopaj keser; yurt içi temettüler belirli bir tutarı aşarsa beyana tabi olabilir (bu durumda brüt temettünün yarısı istisnadır). Sınırı her yıl GİB duyurusundan kontrol et.</p></div>
+</section>
+
+<section data-v="rapor">
+  <div class="row noprint" style="justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"><div><h2 style="margin:0">Aylık rapor</h2><p class="sm mut" style="margin:6px 0 0">Seçtiğin ayın tek sayfalık özeti. Yazdır düğmesiyle PDF olarak da kaydedebilirsin.</p></div>
+    <div class="row" style="gap:10px;align-items:flex-end"><div><label for="rpAy">Ay</label><select id="rpAy"></select></div><button type="button" class="ghost" id="rpPrint">Yazdır / PDF</button></div></div>
+  <div id="rpBody" style="margin-top:18px"></div>
 </section>
 
 <section data-v="analiz">
@@ -219,7 +269,7 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
 </section>
 
 <section data-v="plan">
-  <h2 style="margin:0">Plan ve risk</h2>
+  <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Plan ve risk</h2><a href="#rapor" class="sm">Aylık rapor →</a></div>
   <p class="sm mut" style="margin:6px 0 0">Gerçek getirin, hedef dağılımın, aylık alım planın, riskler ve kararlarının takibi. Hesaplar bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.</p>
 
   <div class="card" style="margin-top:22px"><h3>Getirin ne kadar iyi? <span class="xs mut" id="bmAt"></span></h3>
@@ -236,6 +286,22 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
     <div id="dcaBox" style="margin-top:16px"></div>
   </div>
 
+  <div class="card" style="margin-top:22px"><h3>Düzenli alım simülatörü</h3>
+    <p class="sm mut" style="margin-top:0">Geçmişte her ayın ilk işlem gününde aynı tutarı alsaydın bugün ne olurdu? Düzenli alımın (DCA) etkisini gerçek fiyatlarla gösterir. Geçmiş getiri geleceği garanti etmez.</p>
+    <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div><label for="simSym">Varlık</label><select id="simSym" style="min-width:200px"></select></div>
+      <div><label for="simAmt">Aylık tutar (TL)</label><input id="simAmt" inputmode="decimal" style="width:130px" value="10000"></div>
+      <div><label for="simYrs">Süre</label><select id="simYrs"><option value="1">1 yıl</option><option value="3" selected>3 yıl</option><option value="5">5 yıl</option></select></div>
+    </div>
+    <div id="simBox" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card" style="margin-top:22px"><h3>Temettü takvimi ve beklenen gelir</h3>
+    <p class="sm mut" style="margin-top:0">Elindeki hisselerin son 12 ayda dağıttığı temettüye göre yıllık tahmini gelir ve KAP'taki yaklaşan ödeme tarihleri. BIST temettülerinde %15 stopaj kesilir.</p>
+    <div class="scroll"><table id="divTable"></table></div>
+    <p class="xs mut" id="divNote" style="margin:8px 0 0"></p>
+  </div>
+
   <div class="card" style="margin-top:22px"><h3>Riskler</h3>
     <div id="riskWarn"></div>
     <div class="grid g3" style="margin-top:14px" id="riskStats"></div>
@@ -244,9 +310,6 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
     <div class="scroll"><table id="scTable"></table></div>
   </div>
 
-  <div class="card" style="margin-top:22px"><h3>Fonların vergi sonrası durumu</h3>
-    <p class="sm mut" style="margin-top:0">Fon kazançları satışta stopaja tabi olabilir; oran fon türüne ve alış tarihine göre değişir (hisse yoğun fonlarda genelde %0). Fonun izahnamesinden ya da aracı kurumundan öğrendiğin oranı yaz.</p>
-    <div class="scroll"><table id="taxTable"></table></div>
   </div>
 
   <div class="card" style="margin-top:22px"><h3>Yatırım günlüğü</h3>

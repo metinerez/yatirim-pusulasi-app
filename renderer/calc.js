@@ -469,6 +469,44 @@ const C = (() => {
     return Object.values(P).map(p => ({ ...p, be: p.qty > 0 ? p.rcost / p.qty : null }));
   }
 
-  return { cpiMonths, cpiFactor, cpiGap, realPositions, ULKE, region, ISIN, ccOf, catOf, holdKey, normWeights, latestHold, lookThrough, overlap, holdChange, norm, num, toISO, parseDates, sma, ema, rsi, macd, boll, atr, levels, stats, technical, FIN, FIN_ALIAS, parsePeriod, pkey, finSorted, ttm, yoy, ratios, piotroski, fundScore, RULES, label, combined, positions };
+
+  /* ---------- Vergi: FIFO ile satış kazancı ve Yİ-ÜFE endekslemesi ---------- */
+  // ufe: { 'YYYY-MM': aylık % değişim }. Endeks oranı = alış ayı dahil, satış ayı hariç aylık değişimlerin çarpımı
+  const ymOf = d => String(d).slice(0, 7);
+  const ymNext = ym => { let [y, m] = ym.split('-').map(Number); m++; if (m > 12) { m = 1; y++; } return `${y}-${String(m).padStart(2, '0')}`; };
+  function ufeFactor(ufe, buyD, sellD) {
+    let f = 1, ym = ymOf(buyD); const end = ymOf(sellD); let n = 0;
+    while (ym < end) { const v = ufe && ufe[ym]; if (v == null) return null; f *= 1 + v / 100; ym = ymNext(ym); if (++n > 600) return null; }
+    return f;
+  }
+  function taxFifo(txns, year, ufe) {
+    const out = [], lots = {};
+    for (const x of txns.slice().sort((a, b) => (a.d || '').localeCompare(b.d || '') || (a.side === 'AL' ? -1 : 1))) {
+      const L = lots[x.sym] || (lots[x.sym] = []), q = +x.qty, pr = +x.price, fee = +x.fee || 0;
+      if (x.side === 'AL') { L.push({ d: x.d, q, unit: (q * pr + fee) / q }); continue; }
+      let rem = q; const unitS = (q * pr - fee) / q;
+      while (rem > 1e-12 && L.length) {
+        const l = L[0], take = Math.min(rem, l.q);
+        if (String(x.d).slice(0, 4) === String(year)) {
+          const cost = take * l.unit, f = ufeFactor(ufe, l.d, x.d), idx = f != null && f - 1 >= 0.10;
+          const icost = idx ? cost * f : cost, proc = take * unitS;
+          out.push({ sym: x.sym, buy: l.d, sell: x.d, q: take, cost, f, idx, icost, proc, gain: proc - icost, miss: f == null });
+        }
+        l.q -= take; rem -= take; if (l.q <= 1e-12) L.shift();
+      }
+    }
+    return out;
+  }
+  // Gelir vergisi (ücret dışı gelirler tarifesi)
+  const TARIFE = {
+    2025: [[158000, .15], [330000, .20], [800000, .27], [4300000, .35], [Infinity, .40]],
+    2026: [[190000, .15], [400000, .20], [1000000, .27], [5300000, .35], [Infinity, .40]]
+  };
+  function incomeTax(m, year) {
+    const T = TARIFE[year] || TARIFE[2026]; let t = 0, lo = 0;
+    for (const [hi, r] of T) { if (m <= lo) break; t += (Math.min(m, hi) - lo) * r; lo = hi; }
+    return Math.max(0, t);
+  }
+  return { cpiMonths, cpiFactor, cpiGap, realPositions, ULKE, region, ISIN, ccOf, catOf, holdKey, normWeights, latestHold, lookThrough, overlap, holdChange, norm, num, toISO, parseDates, sma, ema, rsi, macd, boll, atr, levels, stats, technical, FIN, FIN_ALIAS, parsePeriod, pkey, finSorted, ttm, yoy, ratios, piotroski, ufeFactor, taxFifo, incomeTax, TARIFE, fundScore, RULES, label, combined, positions };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = C;

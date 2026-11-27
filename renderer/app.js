@@ -82,7 +82,8 @@ function mergePx(a, rows) {
   if (l && (!a.lastDate || l[0] >= a.lastDate)) { a.last = l[4]; a.lastDate = l[0]; }
 }
 const rf = () => (C.num(S.settings.rf) || 0) / 100;
-const infl = () => (C.num(S.settings.infl) || 0) / 100;
+const infl = () => (C.num(S.settings.infl) || S.macro?.pka?.tufe12 || 0) / 100;
+const inflSrc = () => C.num(S.settings.infl) ? `%${S.settings.infl}, Ayarlar` : S.macro?.pka?.tufe12 ? `%${fmt(S.macro.pka.tufe12, 1)}, TCMB piyasa katılımcıları anketi` : '';
 
 /* Hesap önbelleği: aynı nesne için bir kez hesapla */
 let cache = new WeakMap();
@@ -112,7 +113,7 @@ const CLS = { fonlar: 'fon', hisseler: 'hisse', emtia: 'emtia', coin: 'coin' };
 const CLS_HASH = { fon: 'fonlar', hisse: 'hisseler', emtia: 'emtia', coin: 'coin' };
 const CLS_AD = { fon: 'Fonlar', hisse: 'Hisseler', emtia: 'Emtia', coin: 'Coin' };
 const CLS_COL = { fon: 'var(--teal)', hisse: 'var(--blue)', emtia: 'var(--gold)', coin: 'var(--orange)' };
-const VIEWS = ['ana', 'fonlar', 'hisseler', 'emtia', 'coin', 'analiz', 'mali', 'dolayli', 'plan', 'radar', 'incele', 'veri'];
+const VIEWS = ['ana', 'fonlar', 'hisseler', 'emtia', 'coin', 'analiz', 'mali', 'dolayli', 'plan', 'radar', 'fonsec', 'incele', 'vergi', 'rapor', 'veri'];
 const ALIAS = { pusula: 'ana', portfoy: 'fonlar' };
 let view = 'ana', hash = 'ana', curType = null, selA = null, selM = null, range = 260, totRange = 99999, newsF = 'tum';
 function route() {
@@ -125,7 +126,7 @@ function route() {
   render();
 }
 let raf = 0;
-function render() { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { try { if (DESK && window.deskStatus) setSt(...window.deskStatus()); renderLists(); ({ ana: rAna, sinif: () => rSinif(curType), analiz: rAnaliz, mali: rMali, dolayli: rDolayli, radar: rRadar, incele: rIncele, plan: rPlan, veri: rVeri })[view](); } catch (e) { console.error(e); } }); }
+function render() { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { try { if (DESK && window.deskStatus) setSt(...window.deskStatus()); renderLists(); ({ ana: rAna, sinif: () => rSinif(curType), analiz: rAnaliz, mali: rMali, dolayli: rDolayli, radar: rRadar, fonsec: rFonsec, incele: rIncele, vergi: rVergi, rapor: rRapor, plan: rPlan, veri: rVeri })[view](); } catch (e) { console.error(e); } }); }
 function renderLists() {
   const syms = Object.keys(S.assets).sort();
   $('#symList').innerHTML = syms.map(s => `<option value="${esc(s)}">`).join('') + GOLD_UNITS.filter(u => !S.assets[u[0]]).map(u => `<option value="${u[0]}" label="${esc(u[1])}">`).join('');
@@ -345,7 +346,7 @@ function dcaPlan(P, amount) {      // satış yapmadan, yeni parayı hedefe en �
 function rTargets() {
   const P = portfolio(), T = targets(), tsum = CLASSES.reduce((s, k) => s + (+T[k] || 0), 0);
   $('#tgForm').innerHTML = CLASSES.map(k => `<div><label for="tg_${k}">${CLS_AD[k]} %</label><input id="tg_${k}" data-tg="${k}" inputmode="decimal" style="width:90px" value="${T[k] ? esc(String(T[k]).replace('.', ',')) : ''}" placeholder="0"></div>`).join('') +
-    `<div><label for="tgMon">Aylık alım tutarı (TL)</label><input id="tgMon" inputmode="decimal" style="width:150px" value="${S.settings.monthly ? esc(String(S.settings.monthly)) : ''}" placeholder="ör. 20000"></div><span class="xs ${Math.abs(tsum - 100) > .01 && tsum ? 'dn' : 'mut'}">Toplam %${fmt(tsum, 0)}</span>`;
+    `<div><label for="tgMon">Aylık alım tutarı (TL)</label><input id="tgMon" inputmode="decimal" style="width:150px" value="${S.settings.monthly ? esc(String(S.settings.monthly)) : ''}" placeholder="ör. 20000"></div><div><label for="dcaDay">Alım günü (ayın kaçı)</label><input id="dcaDay" inputmode="numeric" style="width:90px" value="${S.settings.dcaDay ? esc(String(S.settings.dcaDay)) : ''}" placeholder="ör. 5"></div><span class="xs ${Math.abs(tsum - 100) > .01 && tsum ? 'dn' : 'mut'}">Toplam %${fmt(tsum, 0)}</span>`;
   const V = {}; CLASSES.forEach(k => V[k] = 0); P.pos.filter(p => p.qty > 0).forEach(p => { if (V[p.type] != null) V[p.type] += p.value; });
   const tot = Object.values(V).reduce((a, b) => a + b, 0);
   $('#tgTable').innerHTML = !tot ? '' : `<thead><tr><th>Sınıf</th><th class="n">Bugün</th><th class="n">Şu anki pay</th><th class="n">Hedef</th><th class="n">Sapma</th><th class="n">Hedefe göre fark</th></tr></thead><tbody>${CLASSES.map(k => {
@@ -359,10 +360,10 @@ function rTargets() {
   for (const k of CLASSES) {
     const amt = plan.out[k]; if (amt < 1) continue;
     const ps = P.pos.filter(p => p.qty > 0 && p.type === k), sv = ps.reduce((s, p) => s + p.value, 0);
-    const sub = ps.length ? ps.sort((a, b) => b.value - a.value).map(p => `${esc(p.sym)} ${fm(amt * p.value / sv)}${p.last ? ` <span class="xs mut">(~${fmt(amt * p.value / sv / p.last, p.last > 100 ? 2 : 0)} adet)</span>` : ''}`).join(' · ') : '<span class="mut">bu sınıfta pozisyonun yok; seçtiğin bir varlığa</span>';
+    const sub = ps.length ? ps.sort((a, b) => b.value - a.value).map(p => `${esc(p.sym)} ${fm(amt * p.value / sv)}${p.last ? ` <span class="xs mut">(~${fmt(amt * p.value / sv / p.last, p.last > 100 ? 2 : 0)} adet)</span>` : ''}${assetHint(p.sym)}`).join(' · ') : '<span class="mut">bu sınıfta pozisyonun yok; seçtiğin bir varlığa</span>';
     lines.push(`<tr><td><b>${CLS_AD[k]}</b></td><td class="n"><b>${fm(amt)}</b></td><td class="sm">${sub}</td></tr>`);
   }
-  $('#dcaBox').innerHTML = `<h3>Bu ayki ${fm(C.num(S.settings.monthly))} için öneri</h3><div class="scroll"><table><tbody>${lines.join('')}</tbody></table></div><p class="xs mut" style="margin:8px 0 0">Önce hedefin en çok altında kalan sınıflara para gider; sınıf içinde şimdiki ağırlıklarına göre bölünür. Kendi tercihine göre değiştirebilirsin.</p>`;
+  $('#dcaBox').innerHTML = `<h3>Bu ayki ${fm(C.num(S.settings.monthly))} için öneri</h3><div class="scroll"><table><tbody>${lines.join('')}</tbody></table></div><p class="xs mut" style="margin:8px 0 0">Önce hedefin en çok altında kalan sınıflara para gider; sınıf içinde şimdiki ağırlıklarına göre bölünür. Kendi tercihine göre değiştirebilirsin. Parantez içindeki uyarılar (sinyal SAT, ısınmış) o varlığa bu ay daha az ayırmayı düşünmen içindir; düzenli alımda asıl önemli olan aksatmamaktır.</p>${(() => { const d = dcaStatus(); if (!d) return ''; return `<div class="note" style="margin-top:12px"><b>${AYADI[+today().slice(5, 7) - 1]} durumu:</b> ${d.done > 0 ? `bu ay ${fm(d.done)} alım girdin${d.left > 0 ? `, ${fm(d.left)} kaldı` : ' <span class="up">✓ hedef tamam</span>'}` : 'bu ay henüz alım girmedin'}. Son 11 ayın ${d.hit}'inde alım yaptın${d.streak > 1 ? ` (üst üste ${d.streak} ay)` : ''}.${d.day ? ` Alım günün ayın ${d.day}'i${d.due ? ' — <b>bugün ya da geçti</b>' : ''}.` : ' Alım gününü yazarsan ana sayfada hatırlatırım.'}</div>`; })()}`;
 }
 function riskData() {
   const { P, lt } = lookThroughNow(); if (!P.value) return null;
@@ -429,7 +430,7 @@ function rJournal() {
     const a = S.assets[t.sym], now = a ? lastOf(a).v : null, ch = now && t.price ? now / t.price - 1 : null, due = t.rev && t.rev <= today() && !t.revd;
     return `<div style="border-top:1px solid var(--line);padding:12px 0"><div class="row" style="justify-content:space-between;gap:10px"><div><b>${esc(t.sym)}</b> <span class="sm mut">${t.side === 'AL' ? 'alış' : 'satış'} · ${dtr(t.d)} · ${fp(+t.price)}${ch != null ? ` → bugün ${fp(now)} <span class="${cls(ch)}">${fpct(ch)}</span>` : ''}</span>${due ? ' <span class="chip warn" style="display:inline-flex"><i></i><span>gözden geçirme zamanı</span></span>' : t.revd ? ` <span class="xs mut">gözden geçirildi ${dtr(t.revd)}</span>` : t.rev ? ` <span class="xs mut">gözden geçirme ${dtr(t.rev)}</span>` : ''}</div>
       <div class="row" style="gap:6px">${due ? `<button class="ghost sm" data-revok="${esc(t.id)}">Gözden geçirdim</button><button class="ghost sm" data-revlater="${esc(t.id)}">3 ay sonra</button>` : ''}<button class="ghost sm" data-edit="${esc(t.id)}" data-jr="1">Düzenle</button></div></div>
-      ${t.note ? `<p class="sm" style="margin:6px 0 0"><span class="mut">Neden:</span> ${esc(t.note)}</p>` : ''}${t.exit ? `<p class="sm" style="margin:4px 0 0"><span class="mut">Satarım / bakarım:</span> ${esc(t.exit)}</p>` : ''}</div>`;
+      ${t.chk && t.chk.length ? `<p class="xs ${t.chk.length >= 4 ? 'up' : 'mut'}" style="margin:4px 0 0">Kontrol listesi ${t.chk.length}/5</p>` : ''}${t.note ? `<p class="sm" style="margin:6px 0 0"><span class="mut">Neden:</span> ${esc(t.note)}</p>` : ''}${t.exit ? `<p class="sm" style="margin:4px 0 0"><span class="mut">Satarım / bakarım:</span> ${esc(t.exit)}</p>` : ''}</div>`;
   }).join('');
 }
 function rAlarms() {
@@ -438,7 +439,7 @@ function rAlarms() {
   const rows = []; for (const a of list) (a.alarms || []).forEach((x, i) => rows.push({ a, x, i }));
   $('#alTable').innerHTML = !rows.length ? '<tbody><tr><td class="mut sm">Alarm yok.</td></tr></tbody>' : `<thead><tr><th>Varlık</th><th>Koşul</th><th class="n">Seviye</th><th class="n">Şimdi</th><th>Durum</th><th></th></tr></thead><tbody>${rows.map(({ a, x, i }) => `<tr><td><b>${esc(a.sym)}</b></td><td class="sm">${x.dir === 'ust' ? 'üstüne çıkarsa' : 'altına düşerse'}</td><td class="n">${fp(x.px)}</td><td class="n">${lastOf(a).v ? fp(lastOf(a).v) : '—'}</td><td class="sm">${x.fired ? `<span class="up">tetiklendi ${dtr(x.fired)}</span>` : 'bekliyor'}</td><td><button class="ghost sm" data-aldel="${esc(a.sym)}|${i}">Sil</button></td></tr>`).join('')}</tbody>`;
 }
-function rPlan() { rBench(); rTargets(); rRisk(); rTax(); rJournal(); rAlarms(); $('#depRate').value = S.settings.depRate || ''; }
+function rPlan() { rBench(); rTargets(); rSim(); rDiv(); rRisk(); rJournal(); rAlarms(); $('#depRate').value = S.settings.depRate || ''; }
 // ana sayfadaki "dikkat" kutusu
 const staleDays = a => { const L = lastOf(a); if (!L.d || a.noAuto) return null; const d = Math.floor(dayDiff(L.d, today())); return d > (a.type === 'coin' ? 2 : 4) ? d : null; };
 function rDikkat() {
@@ -449,6 +450,8 @@ function rDikkat() {
   const due = dueTx(); if (due.length) items.push(`${due.length} kararının gözden geçirme zamanı geldi (${[...new Set(due.map(t => esc(t.sym)))].join(', ')}). <a href="#plan">Yatırım günlüğü</a>`);
   const fired = []; Object.values(S.assets).forEach(a => (a.alarms || []).forEach(x => { if (x.fired && dayDiff(x.fired, today()) <= 3) fired.push(`${esc(a.sym)} ${x.dir === 'ust' ? '≥' : '≤'} ${fp(x.px)}`); }));
   if (fired.length) items.push(`Tetiklenen alarm: ${fired.join(', ')}.`);
+  try { const d = dcaStatus(); if (d && d.due) items.push(`Aylık alım günün geldi: bu ay ${d.done > 0 ? fm(d.done) + ' alım girdin, ' + fm(d.left) + ' kaldı' : fm(d.mon) + ' alım planın var'}. <a href="#plan">Önerilen dağılım</a>`); } catch (e) { }
+  if (+today().slice(8, 10) <= 7 && Object.keys(S.txns).length) items.push(`${AYADI[+prevYm(ymNow()).slice(5) - 1]} ayının raporu hazır. <a href="#rapor">Aylık rapor</a>`);
   try { const up = upcomingAll(); if (up.length) items.push('Yaklaşan: ' + up.slice(0, 5).map(x => `<b>${esc(x.sym)}</b> ${esc(x.t.toLocaleLowerCase('tr-TR'))} ${dtr(x.d)}`).join(' · ') + (up.length > 5 ? ` +${up.length - 5}` : '') + '.'); } catch (e) { }
   try { const r = riskData(); if (r) r.warns.slice(0, 2).forEach(w => items.push(w)); if (r && r.warns.length > 2) items.push(`+${r.warns.length - 2} risk notu daha. <a href="#plan">Plan ve risk</a>`); } catch (e) { }
   $('#dikkat').hidden = !items.length;
@@ -457,6 +460,7 @@ function rDikkat() {
 document.addEventListener('change', async e => {
   const t = e.target;
   if (t.dataset && t.dataset.tg) { S.settings.targets = { ...targets(), [t.dataset.tg]: C.num(t.value) || 0 }; await putSettings(); rTargets(); return; }
+  if (t.id === 'dcaDay') { const v = Math.round(C.num(t.value)); S.settings.dcaDay = v >= 1 && v <= 28 ? v : null; await putSettings(); rTargets(); return; }
   if (t.id === 'tgMon') { S.settings.monthly = C.num(t.value) || null; await putSettings(); rTargets(); return; }
   if (t.id === 'depRate') { S.settings.depRate = t.value.trim(); await putSettings(); rBench(); return; }
   if (t.dataset && t.dataset.stopaj) { const a = ensureAsset(t.dataset.stopaj); const v = C.num(t.value); a.stopaj = isFinite(v) ? v : null; await putAsset(a); rTax(); return; }
@@ -711,8 +715,10 @@ function txEditMode(t) {
     const dec = v => String(v).replace('.', ',');
     $('#txQty').value = dec(t.qty); $('#txPrice').value = dec(t.price); $('#txFee').value = +t.fee ? dec(t.fee) : '';
     $('#txNote').value = t.note || ''; $('#txExit').value = t.exit || ''; $('#txRev').value = t.rev || '';
+    document.querySelectorAll('[data-chk]').forEach(x => x.checked = (t.chk || []).includes(+x.dataset.chk));
     $('#txForm').closest('.card').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } else { $('#txQty').value = ''; $('#txPrice').value = ''; $('#txFee').value = ''; $('#txNote').value = ''; $('#txExit').value = ''; $('#txRev').value = ''; }
+  } else { $('#txQty').value = ''; $('#txPrice').value = ''; $('#txFee').value = ''; $('#txNote').value = ''; $('#txExit').value = ''; $('#txRev').value = ''; document.querySelectorAll('[data-chk]').forEach(x => x.checked = false); }
+  try { txInfo(); } catch (e) { }
 }
 $('#txCancel').addEventListener('click', () => txEditMode(null));
 $('#txForm').addEventListener('submit', async e => {
@@ -732,7 +738,8 @@ $('#txForm').addEventListener('submit', async e => {
   const wasEdit = !!editTx, old = editTx && S.txns[editTx];
   const note = $('#txNote').value.trim(), exit = $('#txExit').value.trim(); let rev = $('#txRev').value || '';
   if ((note || exit) && !rev) rev = addDays(d > today() ? d : today(), 90);
-  await putTx({ ...(old || {}), id: editTx || newId(), sym, side, d, qty, price, fee, note, exit, rev, ...(old && old.rev !== rev ? { revd: null } : {}) });
+  const chk = side === 'AL' ? [...document.querySelectorAll('[data-chk]')].filter(x => x.checked).map(x => +x.dataset.chk) : [];
+  await putTx({ ...(old || {}), id: editTx || newId(), sym, side, d, qty, price, fee, note, exit, rev, chk: chk.length ? chk : (old && old.chk) || null, ...(old && old.rev !== rev ? { revd: null } : {}) });
   if (old && old.sym !== sym && !Object.values(S.txns).some(t => t.sym === old.sym) && S.assets[old.sym] && !(S.assets[old.sym].px || []).length) await delAsset(old.sym);
   txEditMode(null);
   if (DESK && (isNew || (old && old.sym !== sym))) setTimeout(() => pRefresh([sym]).catch(() => { }), 900);  // yeni varlık: fiyat geçmişi + (hisse ise) mali tablolar
@@ -1001,7 +1008,7 @@ function karne(a) {
     if (sk && r.pe && sk.fk) { const d = r.pe / sk.fk - 1; if (d < -.3) good.push(`F/K (${fx(r.pe, 1)}) ${esc(sk.ad)} sektörü medyanının (${fx(sk.fk, 1)}) <b>%${fmt(-d * 100, 0)} altında</b>.`); else if (d > .4) bad.push(`F/K (${fx(r.pe, 1)}) sektör medyanının (${fx(sk.fk, 1)}) %${fmt(d * 100, 0)} üstünde: piyasa yüksek büyüme fiyatlıyor.`); }
     if (sk && r.pb && sk.pddd) { const d = r.pb / sk.pddd - 1; if (d < -.3) good.push(`PD/DD (${fx(r.pb)}) sektör medyanının (${fx(sk.pddd)}) %${fmt(-d * 100, 0)} altında.`); }
     if (!sk && r.pe && r.pe < 8) good.push(`F/K ${fx(r.pe, 1)}: kârına göre düşük fiyatlı.`);
-    if (r.roe != null && inf) { const real = (1 + r.roe) / (1 + inf) - 1; if (real > .05) good.push(`Özkaynak kârlılığı ${fpc(r.roe)}, enflasyon beklentisinin (%${esc(S.settings.infl)}) üstünde: <b>reel kâr</b> üretiyor.`); else if (real < -.05) bad.push(`Özkaynak kârlılığı ${fpc(r.roe)}, enflasyonun (%${esc(S.settings.infl)}) altında: ortakların parası reelde eriyor.`); }
+    if (r.roe != null && inf) { const real = (1 + r.roe) / (1 + inf) - 1; if (real > .05) good.push(`Özkaynak kârlılığı ${fpc(r.roe)}, enflasyon beklentisinin (${esc(inflSrc())}) üstünde: <b>reel kâr</b> üretiyor.`); else if (real < -.05) bad.push(`Özkaynak kârlılığı ${fpc(r.roe)}, enflasyon beklentisinin (${esc(inflSrc())}) altında: ortakların parası reelde eriyor.`); }
     else if (r.roe != null && r.roe > .25) good.push(`Özkaynak kârlılığı yüksek (${fpc(r.roe)}).`);
     if (r.revG != null && inf) { if (r.revG < inf - .05) bad.push(`Satışlar yıllık ${fpct(r.revG)} büyümüş; enflasyonun altında, yani <b>reel küçülme</b> var.`); else if (r.revG > inf + .1) good.push(`Satışlar enflasyonun üstünde büyüyor (${fpct(r.revG)}).`); }
     if (r.nd != null && r.nd < 0) good.push('<b>Net nakit</b> pozisyonunda: nakdi finansal borcundan fazla.');
@@ -1025,7 +1032,7 @@ function karneHtml(a) {
   const k = karne(a); if (!k.good.length && !k.bad.length && !k.info.length) return '';
   const ul = (L, c) => L.length ? `<ul class="why ${c}">${L.map(x => `<li>${x}</li>`).join('')}</ul>` : '';
   return `${k.good.length ? '<h4 class="up" style="margin:0 0 4px">Güçlü yanlar</h4>' + ul(k.good, 'g') : ''}${k.bad.length ? '<h4 class="dn" style="margin:12px 0 4px">Dikkat edilecekler</h4>' + ul(k.bad, 'b') : ''}${k.info.length ? '<h4 class="mut" style="margin:12px 0 4px">Bilgi notları</h4>' + ul(k.info, '') : ''}
-  <p class="xs mut" style="margin:10px 0 0">Kurallara dayalı otomatik yorum; yatırım tavsiyesi değildir. Sektör medyanları İş Yatırım verisinden, enflasyon Ayarlar'daki beklentiden.</p>`;
+  <p class="xs mut" style="margin:10px 0 0">Kurallara dayalı otomatik yorum; yatırım tavsiyesi değildir. Sektör medyanları İş Yatırım verisinden, enflasyon beklentisi Ayarlar'dan ya da TCMB piyasa katılımcıları anketinden.</p>`;
 }
 function insightGrid(a) {
   if (a.type !== 'hisse') return '';
@@ -1041,6 +1048,235 @@ function upcomingAll() {
   const out = []; for (const a of Object.values(S.assets)) { if (a.type !== 'hisse') continue; for (const x of calFor(a)) if (dayDiff(today(), x.d) <= 14) out.push({ ...x, sym: a.sym }); }
   return out.sort((p, q) => p.d.localeCompare(q.d));
 }
+
+/* ================= Aylık alım asistanı, simülatör, temettü, fon seçici, vergi, rapor ================= */
+const MAC = () => S.macro || {};
+const cpiN = n => { const ms = C.cpiMonths(S.cpi); if (ms.length < n) return null; return ms.slice(-n).reduce((f, m) => f * (1 + (+S.cpi[m] || 0) / 100), 1) - 1; };
+const depNet = () => (C.num(S.settings.depRate) || 36) / 100;
+const ymNow = () => today().slice(0, 7);
+const monthBuys = ym => Object.values(S.txns).filter(t => t.side === 'AL' && t.d && t.d.slice(0, 7) === ym).reduce((s, t) => s + +t.qty * +t.price + (+t.fee || 0), 0);
+function dcaStatus() {
+  const mon = C.num(S.settings.monthly); if (!(mon > 0)) return null;
+  const ym = ymNow(), done = monthBuys(ym); let streak = 0, y = ym;
+  const months = []; for (let i = 0; i < 12; i++) { months.push(y); y = prevYm(y); }
+  const hit = months.slice(1).filter(m => monthBuys(m) >= mon * .5).length;
+  for (const m of months.slice(1)) { if (monthBuys(m) >= mon * .5) streak++; else break; }
+  const day = +S.settings.dcaDay || null, td = +today().slice(8, 10);
+  return { mon, done, left: Math.max(0, mon - done), hit, streak, day, due: day && td >= day && done < mon * .5 };
+}
+function assetHint(sym) {
+  const a = S.assets[sym]; if (!a) return '';
+  const s = sig(a), l = s?.comb?.label, out = [];
+  if (l === 'SAT' || l === 'GÜÇLÜ SAT') out.push(`<span class="dn" title="Teknik ve temel sinyal">sinyal ${l}</span>`);
+  const t = s?.comb?.t; if (t && t.rsi != null && t.rsi > 75) out.push('<span class="dn" title="RSI 75 üstü: kısa vadede sert yükselmiş">ısınmış</span>');
+  if (staleDays(a)) out.push('<span class="mut">fiyat eski</span>');
+  return out.length ? ' <span class="xs">(' + out.join(', ') + ')</span>' : '';
+}
+
+/* ---- Düzenli alım simülatörü ---- */
+function simSeries(key) {
+  const B = S.bench || {};
+  if (key === '@usd') return { ad: 'Dolar (USD/TL)', s: B.usd }; if (key === '@gold') return { ad: 'Gram altın', s: B.gold }; if (key === '@xu') return { ad: 'BIST 100', s: B.xu100 };
+  const a = S.assets[key]; return a && a.px && a.px.length > 60 ? { ad: key, s: a.px.map(r => [r[0], r[4]]) } : null;
+}
+function dcaSim(ser, amt, yrs) {
+  if (!ser || ser.length < 30) return null;
+  const end = ser[ser.length - 1][0], startD = new Date(Date.parse(end) - yrs * 365.25 * 864e5).toISOString().slice(0, 10);
+  const first = ser.find(r => r[0] >= startD); if (!first) return null;
+  const buys = []; let ym = null;
+  for (const r of ser) { if (r[0] < first[0]) continue; const m = r[0].slice(0, 7); if (m !== ym) { ym = m; if (r[0].slice(0, 7) !== end.slice(0, 7) || buys.length === 0) buys.push({ d: r[0], p: r[1] }); } }
+  if (buys.length < 2) return null;
+  const last = ser[ser.length - 1][1]; let units = 0; buys.forEach(b => units += amt / b.p);
+  const inv = amt * buys.length, val = units * last;
+  const x = xirr([...buys.map(b => ({ d: b.d, a: -amt })), { d: end, a: val }]);
+  const lump = inv / buys[0].p * last;   // aynı toplamı ilk ay tek seferde
+  let need = null; if (C.cpiMonths(S.cpi).length) { const upTo = C.cpiMonths(S.cpi).slice(-1)[0]; need = buys.reduce((s, b) => s + amt * (C.cpiFactor(S.cpi, b.d, upTo) ?? 1), 0); }
+  const best = buys.reduce((m, b) => b.p < m.p ? b : m), worst = buys.reduce((m, b) => b.p > m.p ? b : m);
+  const avgCost = inv / units;
+  return { n: buys.length, from: buys[0].d, end, inv, val, x, lump, need, best, worst, avgCost, avgPx: buys.reduce((s, b) => s + b.p, 0) / buys.length, last };
+}
+function rSim() {
+  const sel = $('#simSym'); if (!sel) return;
+  const opts = [['@xu', 'BIST 100'], ['@gold', 'Gram altın'], ['@usd', 'Dolar (USD/TL)'], ...Object.values(S.assets).filter(a => a.px && a.px.length > 60).sort((a, b) => a.sym.localeCompare(b.sym)).map(a => [a.sym, `${a.sym}${a.name ? ' · ' + a.name.slice(0, 28) : ''}`])];
+  const cur = sel.value || S.settings.simSym || '@xu';
+  sel.innerHTML = opts.map(([k, l]) => `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(l)}</option>`).join('');
+  const ss = simSeries(sel.value), amt = C.num($('#simAmt').value) || 0, yrs = +$('#simYrs').value;
+  const r = ss && amt > 0 ? dcaSim(ss.s, amt, yrs) : null;
+  if (!r) { $('#simBox').innerHTML = '<p class="sm mut">Bu varlık için yeterli fiyat geçmişi yok (karşılaştırma serileri tam güncellemede gelir).</p>'; return; }
+  const short = dayDiff(r.from, r.end) < yrs * 365 - 45;
+  $('#simBox').innerHTML = `<div class="rpk">
+    <div><span class="xs mut">${r.n} ay × ${fm(amt)}</span><b>${fm(r.inv)}</b><span class="xs mut">toplam yatırılan</span></div>
+    <div><span class="xs mut">Bugünkü değer</span><b class="${cls(r.val - r.inv)}">${fm(r.val)}</b><span class="xs ${cls(r.val - r.inv)}">${fpct(r.val / r.inv - 1)} · yıllık ${fpct(r.x)}</span></div>
+    ${r.need ? `<div><span class="xs mut">Enflasyonu yakalamak için</span><b>${fm(r.need)}</b><span class="xs ${cls(r.val - r.need)}">${r.val >= r.need ? 'enflasyonu yendi' : 'enflasyonun gerisinde'} (${fm(r.val - r.need)})</span></div>` : ''}
+    <div><span class="xs mut">Tek seferde ilk ay yatırsaydın</span><b>${fm(r.lump)}</b><span class="xs mut">${r.lump > r.val ? 'tek seferlik daha iyi olurdu' : 'düzenli alım daha iyi oldu'}</span></div>
+  </div>
+  <p class="sm" style="margin:12px 0 0">Ortalama maliyetin <b>${fmt(r.avgCost, 2)}</b>, aynı ayların ortalama fiyatı ${fmt(r.avgPx, 2)}: düzenli alım, ucuz aylarda daha çok adet aldırdığı için ortalama maliyeti fiyat ortalamasının ${r.avgCost <= r.avgPx ? 'altına' : 'üstüne'} çeker. En ucuz alım ${dtr(r.best.d)} (${fmt(r.best.p, 2)}), en pahalı ${dtr(r.worst.d)} (${fmt(r.worst.p, 2)}).${short ? ` <span class="mut">Fiyat geçmişi ${dtr(r.from)} tarihinden başlıyor.</span>` : ''}</p>`;
+}
+document.addEventListener('change', e => { if (['simSym', 'simYrs'].includes(e.target.id)) { if (e.target.id === 'simSym') { S.settings.simSym = e.target.value; } rSim(); } });
+document.addEventListener('input', e => { if (e.target.id === 'simAmt') rSim(); });
+
+/* ---- Temettü ---- */
+const trD = s => { const m = String(s || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
+function divRows() {
+  const P = portfolio(), out = [];
+  for (const p of P.pos.filter(p => p.qty > 0)) {
+    const a = S.assets[p.sym]; if (!a || a.type !== 'hisse') continue;
+    const px = lastOf(a).v; let hb = null, src = '';
+    const L = (a.ins?.i?.temettu || []).map(d => ({ d: trD(d.d), hb: d.hb })).filter(d => d.d && d.hb > 0 && dayDiff(d.d, today()) <= 380);
+    if (L.length) { hb = L.reduce((s, d) => s + d.hb, 0); src = 'İş Yatırım'; }
+    else if (a.ins?.y?.divY > 0 && px) { hb = a.ins.y.divY * px; src = 'Yahoo verim'; }
+    const up = calFor(a).filter(x => /Temettü/.test(x.t));
+    out.push({ sym: p.sym, qty: p.qty, px, hb, src, gross: hb != null ? hb * p.qty : null, net: hb != null ? hb * p.qty * (a.mkt === 'US' ? 1 : .85) : null, y: hb && px ? hb / px : null, us: a.mkt === 'US', up, last: L[0]?.d });
+  }
+  return out;
+}
+function rDiv() {
+  const R = divRows(); if (!$('#divTable')) return;
+  if (!R.length) { $('#divTable').innerHTML = '<tbody><tr><td class="mut">Portföyünde hisse yok.</td></tr></tbody>'; $('#divNote').textContent = ''; return; }
+  const tot = R.reduce((s, r) => s + (r.net || 0), 0);
+  $('#divTable').innerHTML = `<thead><tr><th>Hisse</th><th class="n">Adet</th><th class="n">Son 12 ay hisse başı</th><th class="n">Verim</th><th class="n">Yıllık tahmini (net)</th><th>Yaklaşan</th></tr></thead><tbody>${R.map(r => `<tr><td><b>${esc(r.sym)}</b>${r.src ? `<br><span class="xs mut">${r.src}${r.last ? ' · son ' + dtr(r.last) : ''}</span>` : ''}</td><td class="n">${fmt(r.qty, r.qty % 1 ? 4 : 0)}</td><td class="n">${r.hb != null ? fmt(r.hb, r.hb < 10 ? 3 : 2) + (r.us ? ' TL*' : ' TL') : '<span class="mut">dağıtmamış</span>'}</td><td class="n">${r.y != null ? '%' + fmt(r.y * 100, 2) : '—'}</td><td class="n">${r.net != null ? fm(r.net) : '—'}</td><td class="sm">${r.up.length ? r.up.map(x => `${dtr(x.d)} ${x.idx && DESK ? `<a href="#" data-det="${esc(x.idx)}">KAP</a>` : ''}`).join('<br>') : '<span class="mut">—</span>'}</td></tr>`).join('')}<tr><td colspan="4"><b>Toplam</b></td><td class="n"><b>${fm(tot)}</b></td><td></td></tr></tbody>`;
+  $('#divNote').innerHTML = `Tahmin geçen yılın temettüsüne dayanır; şirket bu yıl daha az ya da hiç dağıtmayabilir. ${R.some(r => r.us) ? '* Yabancı hisselerde Yahoo temettü verimi bugünkü fiyata uygulanır; ABD %15–30 kaynak vergisi keser ve Türkiye\'de beyan gerekebilir (Vergi sekmesi). ' : ''}Ayda ortalama ${fm(tot / 12)}.`;
+}
+
+/* ---- Fon seçici ---- */
+let fsSort = 'g1y', fsDir = -1;
+function fonRows() { const F = S.fonlar; if (!F || !F.rows) return []; const c = F.cols; return F.rows.map(r => Object.fromEntries(c.map((k, i) => [k, r[i]]))); }
+function rFonsec() {
+  const F = S.fonlar, all = fonRows(), c12 = cpiN(12), c36 = cpiN(36), dep = depNet();
+  $('#fsInfo').innerHTML = F ? `Kaynak: TEFAS · ${all.length} fon · güncelleme ${esc(new Date(F.at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }))}${c12 != null ? ` · son 12 ay TÜFE %${fmt(c12 * 100, 1)}` : ''}` : 'Fon kataloğu ilk tam güncellemede gelir (sağ üstten "Verileri güncelle").';
+  // senin fonların
+  const P = portfolio(), held = P.pos.filter(p => p.qty > 0 && S.assets[p.sym]?.type === 'fon').map(p => p.sym), byK = Object.fromEntries(all.map(r => [r.kod, r]));
+  const turMed = {}; for (const r of all) (turMed[r.tip + r.tur] = turMed[r.tip + r.tur] || []).push(r.g1y);
+  const mm = k => { const v = (turMed[k] || []).filter(x => x != null).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : null; };
+  const rankIn = r => { const L = all.filter(x => x.tip === r.tip && x.tur === r.tur && x.g1y != null).sort((a, b) => b.g1y - a.g1y); const i = L.findIndex(x => x.kod === r.kod); return i >= 0 ? [i + 1, L.length] : null; };
+  const mine = held.map(k => byK[k]).filter(Boolean);
+  $('#fsMine').innerHTML = !F ? '<p class="sm mut">Katalog bekleniyor.</p>' : !held.length ? '<p class="sm mut">Portföyünde fon yok.</p>' : `<div class="scroll"><table><thead><tr><th>Fon</th><th class="n">1 yıl</th><th class="n">Türünün medyanı</th><th class="n">Türünde sıra</th><th class="n">Reel (TÜFE sonrası)</th><th class="n">Mevduata göre</th><th class="n">3 yıl (yıllık)</th><th>Değerlendirme</th></tr></thead><tbody>${mine.map(r => {
+      const g = r.g1y != null ? r.g1y / 100 : null, real = g != null && c12 != null ? (1 + g) / (1 + c12) - 1 : null, vsDep = g != null ? g - dep : null, rk = rankIn(r), md = mm(r.tip + r.tur);
+      const g3 = r.g3y != null ? Math.pow(1 + r.g3y / 100, 1 / 3) - 1 : null, c3 = c36 != null ? Math.pow(1 + c36, 1 / 3) - 1 : null;
+      const v = g == null ? '<span class="mut">1 yıllık geçmiş yok</span>' : real > 0 && vsDep > 0 ? '<span class="up">Enflasyonu ve mevduatı yendi</span>' : real > 0 ? '<span>Enflasyonu yendi, mevduatın gerisinde</span>' : '<span class="dn">Enflasyonun gerisinde</span>';
+      return `<tr><td><b>${esc(r.kod)}</b><br><span class="xs mut">${esc(r.tur)} · risk ${r.risk ?? '—'}</span></td><td class="n ${cls(g)}">${fpct(g)}</td><td class="n">${md != null ? fpct(md / 100) : '—'}</td><td class="n">${rk ? `${rk[0]} / ${rk[1]}` : '—'}</td><td class="n ${cls(real)}">${fpct(real)}</td><td class="n ${cls(vsDep)}">${vsDep != null ? (vsDep >= 0 ? '+' : '−') + fmt(Math.abs(vsDep) * 100, 1) + ' puan' : '—'}</td><td class="n">${g3 != null ? fpct(g3) + (c3 != null ? `<br><span class="xs ${cls(g3 - c3)}">TÜFE ${fpct(c3)}</span>` : '') : '—'}</td><td class="sm">${v}</td></tr>`;
+    }).join('')}</tbody></table></div><p class="xs mut" style="margin:8px 0 0">Mevduat karşılaştırması net yıllık %${fmt(dep * 100, 1)} ile (Plan sekmesinden değiştirilebilir). ${MAC().pka?.tufe12 ? `Piyasa katılımcıları önümüzdeki 12 ay için %${fmt(MAC().pka.tufe12, 1)} enflasyon bekliyor; bundan sonra reel kazanç için fonun bunun üstünde getirmesi gerekir.` : ''}</p>`;
+  // filtreler
+  const tip = $('#fsTip').value || 'YAT', turs = [...new Set(all.filter(r => r.tip === tip).map(r => r.tur))].sort();
+  const tsel = $('#fsTur'), tv = tsel.value; tsel.innerHTML = '<option value="">Tümü</option>' + turs.map(t => `<option${t === tv ? ' selected' : ''}>${esc(t)}</option>`).join('');
+  const q = C.norm($('#fsQ').value), maxR = +$('#fsRisk').value || 7;
+  let L = all.filter(r => r.tip === tip && (!tsel.value || r.tur === tsel.value) && (r.risk == null || r.risk <= maxR) && (!q || C.norm(r.kod + ' ' + r.ad).includes(q)));
+  L.forEach(r => r.real = r.g1y != null && c12 != null ? (1 + r.g1y / 100) / (1 + c12) - 1 : null);
+  L.sort((a, b) => { const x = a[fsSort], y = b[fsSort]; if (x == null) return 1; if (y == null) return -1; return (typeof x === 'string' ? x.localeCompare(y) : x - y) * fsDir; });
+  const th = (k, l) => `<th class="n" data-fss="${k}" style="cursor:pointer">${l}${fsSort === k ? (fsDir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+  const pc = v => v == null ? '—' : `<span class="${cls(v)}">${fpct(v / 100)}</span>`;
+  $('#fsTable').innerHTML = !F ? '' : `<thead><tr><th>Fon</th>${th('risk', 'Risk')}${th('g1a', '1 ay')}${th('g3a', '3 ay')}${th('g6a', '6 ay')}${th('gyb', 'Yıl başı')}${th('g1y', '1 yıl')}${th('real', 'Reel 1 yıl')}${th('g3y', '3 yıl')}${th('g5y', '5 yıl')}<th></th></tr></thead><tbody>${L.slice(0, 150).map(r => `<tr${held.includes(r.kod) ? ' style="background:var(--soft)"' : ''}><td><b>${esc(r.kod)}</b> <span class="xs mut">${esc(r.tur)}</span><br><span class="xs">${esc(r.ad)}</span></td><td class="n">${r.risk ?? '—'}</td><td class="n">${pc(r.g1a)}</td><td class="n">${pc(r.g3a)}</td><td class="n">${pc(r.g6a)}</td><td class="n">${pc(r.gyb)}</td><td class="n"><b>${pc(r.g1y)}</b></td><td class="n">${r.real != null ? `<span class="${cls(r.real)}">${fpct(r.real)}</span>` : '—'}</td><td class="n">${pc(r.g3y)}</td><td class="n">${pc(r.g5y)}</td><td>${S.assets[r.kod] ? '<span class="xs mut">listede</span>' : `<button class="ghost sm" style="white-space:nowrap" data-fwatch="${esc(r.kod)}" data-ad="${esc(r.ad)}">Takibe al</button>`}</td></tr>`).join('')}</tbody>${L.length > 150 ? `<tfoot><tr><td colspan="11" class="xs mut">${L.length} fondan ilk 150'si gösteriliyor; aramayı daralt.</td></tr></tfoot>` : ''}`;
+}
+document.addEventListener('click', async e => {
+  const h = e.target.closest('[data-fss]'); if (h) { const k = h.dataset.fss; if (fsSort === k) fsDir *= -1; else { fsSort = k; fsDir = k === 'risk' ? 1 : -1; } rFonsec(); return; }
+  const w = e.target.closest('[data-fwatch]'); if (w) { const k = w.dataset.fwatch; const a = ensureAsset(k, 'fon'); if (!a.name) a.name = w.dataset.ad; await putAsset(a); toast(`${k} İncele sekmesine eklendi; fiyat geçmişi ve içeriği çekiliyor.`); if (DESK) pRefresh([k]).catch(() => { }); rFonsec(); }
+});
+document.addEventListener('change', e => { if (['fsTip', 'fsTur', 'fsRisk'].includes(e.target.id)) rFonsec(); });
+document.addEventListener('input', e => { if (e.target.id === 'fsQ') rFonsec(); });
+
+/* ---- Vergi ---- */
+const isForeign = sym => S.assets[sym]?.type === 'hisse' && S.assets[sym]?.mkt === 'US';
+function rVergi() {
+  const yNow = +today().slice(0, 4), ysel = $('#vgYil');
+  const years = [...new Set([yNow, yNow - 1, ...Object.values(S.txns).map(t => +String(t.d).slice(0, 4))])].filter(y => y >= 2020 && y <= yNow).sort((a, b) => b - a);
+  const def = +today().slice(5, 7) <= 3 ? yNow - 1 : yNow, cur = +ysel.value || def;
+  ysel.innerHTML = years.map(y => `<option${y === cur ? ' selected' : ''}>${y}</option>`).join('');
+  const Y = +ysel.value || cur;
+  $('#vgDue').innerHTML = `${Y} gelirleri için beyanname <b>1–31 Mart ${Y + 1}</b> arasında verilir; vergi Mart ve Temmuz'da iki taksitte ödenir.`;
+  const ufe = MAC().ufe || null;
+  const tx = Object.values(S.txns).filter(t => isForeign(t.sym));
+  const L = C.taxFifo(tx, Y, ufe);
+  const tg = L.reduce((s, r) => s + r.gain, 0), miss = L.some(r => r.miss);
+  $('#vgFor').innerHTML = !L.length ? `<tbody><tr><td class="mut">${Y} yılında yurt dışı hisse satışın yok.${tx.length ? '' : ' (Yabancı hisse işlemi girilmemiş.)'}</td></tr></tbody>` : `<thead><tr><th>Hisse</th><th>Alış → satış</th><th class="n">Adet</th><th class="n">Alış bedeli</th><th class="n">Yİ-ÜFE artışı</th><th class="n">Endeksli maliyet</th><th class="n">Satış bedeli</th><th class="n">Kazanç</th></tr></thead><tbody>${L.map(r => `<tr><td><b>${esc(r.sym)}</b></td><td class="sm">${dtr(r.buy)} → ${dtr(r.sell)}</td><td class="n">${fmt(r.q, r.q % 1 ? 4 : 0)}</td><td class="n">${fm(r.cost)}</td><td class="n">${r.f != null ? `${fpc(r.f - 1)}${r.idx ? '' : ' <span class="xs mut">(%10 altı)</span>'}` : '<span class="dn xs">endeks eksik</span>'}</td><td class="n">${fm(r.icost)}</td><td class="n">${fm(r.proc)}</td><td class="n ${cls(r.gain)}">${fm(r.gain)}</td></tr>`).join('')}<tr><td colspan="7"><b>Toplam (zararlar kârdan düşülür)</b></td><td class="n ${cls(tg)}"><b>${fm(tg)}</b></td></tr></tbody>`;
+  $('#vgForNote').innerHTML = `Tutarlar işlemi girdiğin TL fiyatlarıyla hesaplandı. Beyanda alış ve satış bedeli, işlem günündeki <b>TCMB döviz alış kuruyla</b> TL'ye çevrilir; aracı kurumunun dökümündeki dolar tutarlarla karşılaştır. Komisyonlar maliyete eklendi, satış tutarından düşüldü.${miss ? ' <span class="dn">Bazı aylar için Yİ-ÜFE verisi yok (tam güncellemede TCMB\'den gelir).</span>' : ''}${ufe ? '' : ' <span class="dn">Yİ-ÜFE verisi henüz çekilmedi.</span>'}`;
+  // temettü
+  const fd = (S.settings.fdiv || {})[Y]; const est = divRows().filter(r => r.us).reduce((s, r) => s + (r.gross || 0), 0);
+  const lim = Y >= 2026 ? 22000 : 18000;
+  $('#vgDiv').innerHTML = `<p class="sm" style="margin-top:0">Yurt dışı hisselerden aldığın temettüler (vergi kesintisi Türkiye'de yapılmadığı için) toplamı <b>${fm(lim)}</b>'yi aşarsa tamamı beyan edilir; yurt dışında ödenen vergi, Türkiye'de hesaplanan vergiden belirli sınırlarla mahsup edilebilir.</p>
+    <div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap"><div><label for="vgFdiv">${Y} yılında aldığın yurt dışı temettü (brüt, TL)</label><input id="vgFdiv" inputmode="decimal" style="width:170px" value="${fd != null ? esc(String(fd)) : ''}" placeholder="${est ? fmt(est, 0) : '0'}"></div>${est ? `<span class="xs mut">Yahoo verimine göre tahmini yıllık ${fm(est)}; gerçek tutarı aracı kurum dökümünden yaz.</span>` : ''}</div>`;
+  // özet
+  const div = fd != null ? +fd : 0, divIn = div > lim ? div : 0, other = C.num(S.settings.vgOther) || 0;
+  const matrah = Math.max(0, tg) + divIn, base = C.incomeTax(other, Y), tax = C.incomeTax(matrah + other, Y) - base;
+  $('#vgSum').innerHTML = `<div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px"><div><label for="vgOther">Beyana girecek diğer gelirin (kira vb., TL)</label><input id="vgOther" inputmode="decimal" style="width:170px" value="${other ? esc(String(other)) : ''}" placeholder="0"></div><span class="xs mut">Tek işverenden alınan ve sınırı aşmayan maaş genelde beyana girmez.</span></div>
+    <div class="lv"><span>Yurt dışı hisse kazancı</span><span>${fm(Math.max(0, tg))}</span><span>Yurt dışı temettü ${div && !divIn ? '<span class="xs mut">(sınırın altında, beyan yok)</span>' : ''}</span><span>${fm(divIn)}</span><span><b>Bu gelirlerden doğan tahmini vergi</b></span><span><b>${fm(tax)}</b></span>${matrah + other > 0 ? `<span>Ortalama oran</span><span>${fpc(matrah ? tax / matrah : 0)}</span>` : ''}</div>
+    <p class="xs mut" style="margin:10px 0 0">${Y} ücret dışı gelir tarifesiyle (${C.TARIFE[Y] ? '' : 'tarife bilinmediği için 2026 tarifesi, '}%15–%40) hesaplandı. ${matrah === 0 ? 'Beyan gerektiren kazanç görünmüyor.' : 'Beyan zorunlu görünüyor.'} Yurt dışında kesilen vergiler ve yıl içinde ödenen geçici vergiler hesaba katılmadı.</p>`;
+  rTax();
+}
+document.addEventListener('change', async e => {
+  if (e.target.id === 'vgYil') { rVergi(); return; }
+  if (e.target.id === 'vgFdiv') { const Y = +$('#vgYil').value; const v = C.num(e.target.value); S.settings.fdiv = { ...(S.settings.fdiv || {}), [Y]: isFinite(v) ? v : null }; await putSettings(); rVergi(); return; }
+  if (e.target.id === 'vgOther') { S.settings.vgOther = C.num(e.target.value) || null; await putSettings(); rVergi(); return; }
+});
+
+/* ---- Alım öncesi kontrol listesi ---- */
+function txInfo() {
+  const box = $('#txInfo'); if (!box) return;
+  const side = $('#txSide').value, v = $('#txSym').value.trim(), sym = S.assets[v.toUpperCase()] ? v.toUpperCase() : S.assets[trKey(v)] ? trKey(v) : v.toUpperCase();
+  $('#txChk').hidden = side !== 'AL';
+  const n = [...document.querySelectorAll('[data-chk]')].filter(x => x.checked).length; $('#txChkN').textContent = n ? `${n}/5` : '';
+  const a = S.assets[sym], qty = C.num($('#txQty').value), pr = C.num($('#txPrice').value), out = [];
+  if (a) {
+    const s = sig(a); if (s?.comb) out.push(`Sinyal: ${tagH(s.comb.label)}`);
+    const y = a.ins?.y; if (y?.mean && y?.px && y.n >= 3) out.push(`${y.n} analistin ortalama hedefi ${fpct(y.mean / y.px - 1)}`);
+    if (a.ins?.i?.oneri) out.push(`İş Yatırım: ${esc(a.ins.i.oneri)}`);
+    const k = karne(a); if (k.bad.length) out.push(`<span class="dn">${k.bad.length} dikkat notu</span> (<a href="#analiz" data-goa="${esc(sym)}">karneye bak</a>)`);
+  }
+  if (qty > 0 && pr > 0) {
+    const P = portfolio(), amt = qty * pr, tot = P.value + amt, cur = (P.pos.find(p => p.sym === sym)?.value) || 0, w = (cur + amt) / tot;
+    out.push(`Alımdan sonra ${esc(sym)} portföyün <b class="${w > .1 ? 'dn' : ''}">%${fmt(w * 100, 1)}</b>'i olur`);
+  }
+  box.hidden = !out.length; box.innerHTML = out.join(' · ');
+}
+['txSym', 'txQty', 'txPrice', 'txSide'].forEach(id => { $('#' + id)?.addEventListener('input', txInfo); $('#' + id)?.addEventListener('change', txInfo); });
+document.addEventListener('change', e => { if (e.target.dataset && e.target.dataset.chk != null) txInfo(); });
+document.addEventListener('click', e => { const g = e.target.closest('[data-goa]'); if (g) { selA = g.dataset.goa; } });
+
+/* ---- Aylık rapor ---- */
+function qtyAt(sym, d) { let q = 0; for (const t of Object.values(S.txns)) if (t.sym === sym && t.d && t.d <= d) q += t.side === 'AL' ? +t.qty : -t.qty; return Math.max(0, q); }
+function valuesAt(d) {
+  const out = { tot: 0, cls: {}, sym: {} }; const syms = [...new Set(Object.values(S.txns).map(t => t.sym))];
+  for (const s of syms) { const q = qtyAt(s, d); if (q <= 0) continue; const p = priceFn(s).f(d); if (p == null) continue; const v = q * p, ty = S.assets[s]?.type || 'fon'; out.tot += v; out.cls[ty] = (out.cls[ty] || 0) + v; out.sym[s] = { v, p, q }; }
+  return out;
+}
+function rRapor() {
+  const sel = $('#rpAy'); const first = Object.values(S.txns).map(t => t.d).filter(Boolean).sort()[0];
+  if (!first) { $('#rpBody').innerHTML = '<div class="empty">Rapor için önce işlem gir.</div>'; sel.innerHTML = ''; return; }
+  const months = []; let y = ymNow(); while (y >= first.slice(0, 7) && months.length < 24) { months.push(y); y = prevYm(y); }
+  const cur = sel.value && months.includes(sel.value) ? sel.value : (+today().slice(8, 10) <= 7 && months[1] ? months[1] : months[0]);
+  sel.innerHTML = months.map(m => `<option value="${m}"${m === cur ? ' selected' : ''}>${AYADI[+m.slice(5) - 1]} ${m.slice(0, 4)}</option>`).join('');
+  const M = sel.value || cur, ad = `${AYADI[+M.slice(5) - 1]} ${M.slice(0, 4)}`;
+  const d0 = (() => { const p = prevYm(M); const [yy, mm] = p.split('-').map(Number); return `${p}-${pad(new Date(yy, mm, 0).getDate())}`; })();
+  const isCur = M === ymNow(), d1 = isCur ? today() : (() => { const [yy, mm] = M.split('-').map(Number); return `${M}-${pad(new Date(yy, mm, 0).getDate())}`; })();
+  const V0 = valuesAt(d0), V1 = valuesAt(d1);
+  const txm = Object.values(S.txns).filter(t => t.d && t.d.slice(0, 7) === M).sort((a, b) => a.d.localeCompare(b.d));
+  const flow = txm.reduce((s, t) => s + (t.side === 'AL' ? 1 : -1) * (+t.qty * +t.price) + (t.side === 'AL' ? (+t.fee || 0) : 0), 0);
+  const gain = V1.tot - V0.tot - flow, ret = V0.tot + flow / 2 > 0 ? gain / (V0.tot + flow / 2) : null;
+  const cm = S.cpi[M] != null ? +S.cpi[M] / 100 : null, real = ret != null && cm != null ? (1 + ret) / (1 + cm) - 1 : null;
+  const ch = Object.keys(V1.sym).filter(s => V0.sym[s] && V0.sym[s].p).map(s => ({ s, r: V1.sym[s].p / V0.sym[s].p - 1, v: V1.sym[s].v })).sort((a, b) => b.r - a.r);
+  const ds = dcaStatus(), buys = monthBuys(M);
+  const nws = (S.news || []).filter(n => n.d && String(n.d).slice(0, 7) === M).length;
+  const upNext = upcomingAll ? Object.values(S.assets).filter(a => a.type === 'hisse').flatMap(a => calFor(a).map(x => ({ ...x, sym: a.sym }))).filter(x => x.d.slice(0, 7) > M).slice(0, 6) : [];
+  $('#rpBody').innerHTML = `<div class="card"><h2 style="margin-top:0">${ad} raporu ${isCur ? '<span class="sm mut">(ay devam ediyor, bugüne kadar)</span>' : ''}</h2>
+    <div class="rpk">
+      <div><span class="xs mut">Ay başı değer</span><b>${fm(V0.tot)}</b><span class="xs mut">${dtr(d0)}</span></div>
+      <div><span class="xs mut">${isCur ? 'Bugünkü' : 'Ay sonu'} değer</span><b>${fm(V1.tot)}</b><span class="xs mut">${dtr(d1)}</span></div>
+      <div><span class="xs mut">Net para girişi</span><b>${fm(flow)}</b><span class="xs mut">${txm.length} işlem</span></div>
+      <div><span class="xs mut">Piyasa kaynaklı değişim</span><b class="${cls(gain)}">${fm(gain)}</b><span class="xs ${cls(ret)}">${ret != null ? 'aylık ' + fpct(ret) : ''}</span></div>
+      <div><span class="xs mut">${ad} TÜFE</span><b>${cm != null ? '%' + fmt(cm * 100, 2) : '—'}</b><span class="xs ${cls(real)}">${real != null ? 'reel ' + fpct(real) : cm == null ? 'henüz açıklanmadı' : ''}</span></div>
+    </div>
+    <div class="grid g2" style="margin-top:18px">
+      <div><h3>Varlık sınıfları</h3><table><thead><tr><th>Sınıf</th><th class="n">Ay başı</th><th class="n">${isCur ? 'Bugün' : 'Ay sonu'}</th><th class="n">Pay</th></tr></thead><tbody>${CLASSES.filter(k => V0.cls[k] || V1.cls[k]).map(k => `<tr><td>${CLS_AD[k]}</td><td class="n">${fm(V0.cls[k] || 0)}</td><td class="n">${fm(V1.cls[k] || 0)}</td><td class="n">%${fmt((V1.cls[k] || 0) / (V1.tot || 1) * 100, 1)}</td></tr>`).join('')}</tbody></table></div>
+      <div><h3>Ayın en iyileri ve en kötüleri</h3>${ch.length ? `<div class="lv">${[...ch.slice(0, 3), ...ch.slice(-3).filter(x => !ch.slice(0, 3).includes(x))].map(x => `<span>${esc(x.s)}</span><span class="${cls(x.r)}">${fpct(x.r)}</span>`).join('')}</div>` : '<p class="sm mut">Karşılaştırılacak fiyat yok.</p>'}</div>
+    </div>
+    <div class="grid g2" style="margin-top:18px">
+      <div><h3>Bu ayki işlemler</h3>${txm.length ? `<table><tbody>${txm.map(t => `<tr><td class="sm">${dtr(t.d)}</td><td><b>${esc(t.sym)}</b> <span class="xs ${t.side === 'AL' ? 'up' : 'dn'}">${t.side}</span></td><td class="n">${fm(+t.qty * +t.price)}</td></tr>`).join('')}</tbody></table>` : '<p class="sm mut">İşlem yok.</p>'}
+        ${ds ? `<p class="sm" style="margin:10px 0 0">Aylık alım hedefi ${fm(ds.mon)} · bu ay ${fm(buys)} ${buys >= ds.mon * .95 ? '<span class="up">✓ tamam</span>' : buys > 0 ? '<span class="mut">(kısmen)</span>' : '<span class="dn">(alım yok)</span>'}</p>` : ''}</div>
+      <div><h3>Notlar</h3><ul class="why">${[nws ? `${nws} yeni KAP bildirimi/haber geldi.` : '', upNext.length ? 'Gelecek ay: ' + upNext.map(x => `${esc(x.sym)} ${esc(x.t.toLocaleLowerCase('tr-TR'))} ${dtr(x.d)}`).join(', ') + '.' : '', MAC().pka?.tufe12 ? `Piyasanın 12 ay sonrası enflasyon beklentisi %${fmt(MAC().pka.tufe12, 1)} (${esc(MAC().pka.ay || '')} anketi).` : '', cm == null ? `${ad} enflasyonu ayın 3'ünde açıklanır; o zaman reel getiri hesaplanır.` : ''].filter(Boolean).map(x => `<li>${x}</li>`).join('') || '<li class="mut">Not yok.</li>'}</ul></div>
+    </div>
+    <p class="xs mut" style="margin:14px 0 0">Aylık getiri yaklaşık hesaptır (ay içindeki para girişlerinin yarısı ay başında sayılır). Fiyatı olmayan günlerde en yakın bilinen fiyat kullanılır.</p></div>`;
+}
+document.addEventListener('change', e => { if (e.target.id === 'rpAy') rRapor(); });
+document.addEventListener('click', e => { if (e.target.id === 'rpPrint') window.print(); });
 
 /* ---------------- Mali tablolar ---------------- */
 let editP = null;
@@ -1445,6 +1681,8 @@ window.addEventListener('hashchange', route); route();
   db.collection('assets').onSnapshot(s => { const o = {}; s.docs.forEach(d => { const v = d.data(); if (v && v.sym) o[v.sym] = JSON.parse(JSON.stringify(v)); }); S.assets = o; done('a', s); render(); if (window.checkSignals) setTimeout(window.checkSignals, 60); }, fail);
   db.collection('txns').onSnapshot(s => { const o = {}; s.docs.forEach(d => { const v = d.data(); if (v && v.id) o[v.id] = { ...v }; }); S.txns = o; done('t', s); render(); }, fail);
   db.collection('bench').onSnapshot(s => { const d = s.docs.find(x => x.id === 'main'); S.bench = d ? d.data() : null; if (view === 'plan') render(); }, () => { });
+  db.collection('fonlar').onSnapshot(s => { const d = s.docs.find(x => x.id === 'main'); S.fonlar = d ? d.data() : null; if (view === 'fonsec') render(); }, () => { });
+  db.collection('macro').onSnapshot(s => { const d = s.docs.find(x => x.id === 'main'); S.macro = d ? d.data() : null; if (['vergi', 'fonsec', 'rapor', 'analiz', 'mali'].includes(view)) render(); }, () => { });
   db.collection('cal').onSnapshot(s => { const d = s.docs.find(x => x.id === 'main'); S.cal = d ? d.data() : null; if (view === 'ana' || view === 'analiz') render(); }, () => { });
   db.collection('radar').onSnapshot(s => { const d = s.docs.find(x => x.id === 'main'); S.radar = d ? d.data() : null; if (view === 'radar') render(); }, () => { });
   db.collection('news').orderBy('d', 'desc').limit(60).onSnapshot(s => { S.news = s.docs.map(d => ({ ...d.data() })); render(); }, () => { });

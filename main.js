@@ -84,6 +84,17 @@ async function refresh(why, only) {
   if (res.radar) { data.radar = { main: res.radar }; }
   if (res.bench) { data.bench = { main: res.bench }; }
   if (res.cal) { data.cal = { main: res.cal }; }
+  if (res.fonlar) { data.fonlar = { main: res.fonlar }; }
+  if (res.macro) {
+    const mm = { ...((data.macro || {}).main || {}) };
+    if (res.macro.ufe) Object.assign(mm, { ufe: res.macro.ufe, tufe: res.macro.tufe, at: res.macro.at });
+    if (res.macro.pka) mm.pka = { ...res.macro.pka, at: new Date().toISOString() };
+    data.macro = { main: mm };
+    // TÜFE tablosunu otomatik tamamla (elle girilen aylar korunur)
+    const st = data.settings = data.settings || {}; const cur = (st.cpi && st.cpi.m) || {};
+    const m = { ...cur }; let add = 0; for (const [k, v] of Object.entries(res.macro.tufe || {})) if (k >= '2015-01' && m[k] == null) { m[k] = v; add++; }
+    if (add) st.cpi = { m, updated: new Date().toISOString().slice(0, 10), src: 'TCMB / TÜİK aylık TÜFE değişimi' };
+  }
   data.settings = data.settings || {};
   const kapOk = !only && !(res.errors || []).some(e => e.startsWith('KAP'));
   const info = { at: new Date().toISOString(), why, errors: res.errors || [], updated: res.updated || [] };
@@ -191,7 +202,8 @@ async function selftest() {
     // Uydurma test portföyü (gerçek veri değil) + canlı kaynakları deneyen geçici varlıklar (yalnızca test klasöründe)
     try { const demo = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'ornek-test.json'), 'utf8')); data.txns = { ...(data.txns || {}), ...demo.txns }; data.assets = { ...(data.assets || {}), ...demo.assets }; } catch (e) { }
     data.assets = { ...data.assets, THYAO: { sym: 'THYAO', name: 'Test hissesi', type: 'hisse', px: [], fin: [], hold: [] }, ALTIN: { sym: 'ALTIN', name: 'Gram altın', type: 'emtia', px: [], fin: [], hold: [] }, BTC: { sym: 'BTC', name: 'Bitcoin', type: 'coin', px: [], fin: [], hold: [] }, AKBNK: { sym: 'AKBNK', name: 'Test bankası', type: 'hisse', px: [], fin: [], hold: [] }, NVDA: { sym: 'NVDA', name: '', type: 'hisse', mkt: 'US', px: [], fin: [], hold: [] }, 'ASML.AS': { sym: 'ASML.AS', name: '', type: 'hisse', mkt: 'US', px: [], fin: [], hold: [] }, CEYREK: { sym: 'CEYREK', name: '', type: 'emtia', px: [], fin: [], hold: [] }, CUMHURIYET: { sym: 'CUMHURIYET', name: '', type: 'emtia', px: [], fin: [], hold: [], prem: 2 } };
-    data.settings = data.settings || {}; data.settings.main = { ...(data.settings.main || {}), kapSince: new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10) };
+    data.txns = { ...data.txns, tNV1: { id: 'tNV1', sym: 'NVDA', side: 'AL', d: '2025-02-03', qty: 5, price: 4300, fee: 10 }, tNV2: { id: 'tNV2', sym: 'NVDA', side: 'SAT', d: '2026-06-15', qty: 3, price: 7000, fee: 10 } };
+    data.settings = data.settings || {}; data.settings.main = { ...(data.settings.main || {}), monthly: 20000, dcaDay: 1, kapSince: new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10) };
     send('data', data);
     const t0 = Date.now(); result.refresh = await refresh('test'); result.refreshMs = Date.now() - t0;
     result.news = Object.entries(data.news || {}).filter(([k]) => k.startsWith('k')).slice(0, 10);
@@ -220,6 +232,14 @@ async function selftest() {
     result.ins = Object.fromEntries(Object.entries(data.assets || {}).filter(([, a]) => a.ins).map(([k, a]) => [k, { y: a.ins.y && { n: a.ins.y.n, mean: a.ins.y.mean, rec: a.ins.y.rec, earn: a.ins.y.earn }, i: a.ins.i && { oneri: a.ins.i.oneri, hedef: a.ins.i.hedef, tahmin: !!a.ins.i.tahmin }, finVer: a.finVer, cfo: (a.fin || []).slice(-1)[0]?.cfo }]));
     result.cal = data.cal && data.cal.main ? { n: data.cal.main.items.length, ornek: data.cal.main.items.slice(0, 3) } : null;
     result.karne = await win.webContents.executeJavaScript("document.querySelector('#mBody')?.innerText.split('Karne')[1]?.slice(0,900)||null");
+    // Fon seçici, vergi, aylık rapor, plan (simülatör + temettü)
+    await win.webContents.executeJavaScript("location.hash='fonsec'"); await wait(2500); await shot('19-fonsec');
+    await win.webContents.executeJavaScript("location.hash='vergi'"); await wait(2000); await shot('20-vergi');
+    await win.webContents.executeJavaScript("location.hash='rapor'"); await wait(2500); await shot('21-rapor');
+    await win.webContents.executeJavaScript("location.hash='plan'"); await wait(2000); await win.webContents.executeJavaScript("document.querySelector('#simBox')?.closest('.card')?.scrollIntoView()"); await wait(800); await shot('22-plan-sim');
+    result.yeni = await win.webContents.executeJavaScript("(()=>({fon:document.querySelectorAll('#fsTable tbody tr').length, mine:document.querySelector('#fsMine')?.innerText.slice(0,300), vergi:document.querySelector('#vgFor')?.innerText.slice(0,500), vsum:document.querySelector('#vgSum')?.innerText.slice(0,300), rapor:document.querySelector('#rpBody')?.innerText.slice(0,500), sim:document.querySelector('#simBox')?.innerText.slice(0,300), div:document.querySelector('#divTable')?.innerText.slice(0,300)}))()");
+    result.macro = data.macro && data.macro.main ? { ufe: Object.keys(data.macro.main.ufe || {}).length, pka: data.macro.main.pka, cpi: Object.keys((data.settings.cpi || {}).m || {}).length } : null;
+    result.fonlar = data.fonlar && data.fonlar.main ? data.fonlar.main.rows.length : null;
     await win.webContents.executeJavaScript("location.hash='dolayli'"); await wait(1500);
     // Bildirim detayı paneli: ilk KAP bildirimine tıkla
     result.detailClick = await win.webContents.executeJavaScript("(()=>{const a=[...document.querySelectorAll('[data-det]')].find(x=>x.offsetParent); if(!a) return 'görünür bağlantı yok'; a.click(); return a.dataset.det;})()");

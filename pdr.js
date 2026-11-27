@@ -132,4 +132,14 @@ async function parsePdr(buf) {
   return { items: res.filter(r => r.w > 0), sum };
 }
 
-module.exports = { unwrap, parsePdr, lines, num };
+
+// Bir PDF'in düz metni (sayfa sırasıyla, boşlukla birleştirilmiş)
+async function pdfText(pdfBuf, maxPages = 12) {
+  const { getDocument } = await pdfjs();
+  const doc = await getDocument({ data: new Uint8Array(pdfBuf), isEvalSupported: false, useSystemFonts: false, disableFontFace: true, verbosity: 0 }).promise;
+  let t = '';
+  for (let i = 1; i <= Math.min(doc.numPages, maxPages); i++) { const c = await (await doc.getPage(i)).getTextContent(); t += ' ' + c.items.map(x => x.str).join(' '); }
+  try { await doc.destroy(); } catch (e) { }
+  return t.replace(/\s+/g, ' ');
+}
+module.exports = { unwrap, parsePdr, lines, num, pdfText };

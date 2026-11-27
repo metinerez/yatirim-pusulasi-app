@@ -410,6 +410,60 @@ async function kapCalendar() {
   return { at: new Date().toISOString(), items };
 }
 
+
+/* ---------- TCMB fiyat endeksleri (TÜFE ve Yİ-ÜFE aylık % değişim; kaynak TÜİK) ---------- */
+async function tcmbPrices() {
+  const B = 'https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/Enflasyon+Verileri';
+  const rows = html => [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].map(m => [...m[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/g)].map(c => ent(c[1].replace(/<[^>]+>/g, '')).replace(/\s+/g, '').trim()));
+  const ym = s => { const m = String(s).match(/^(\d{2})-(\d{4})$/); return m ? `${m[2]}-${m[1]}` : null; };
+  const num = s => { const v = parseFloat(String(s).replace(',', '.')); return isFinite(v) ? v : null; };
+  const tufe = {}, ufe = {};
+  const t = (await getBuf(B)).toString('utf8');
+  for (const r of rows(t)) { const k = ym(r[0]); if (k && r.length >= 3 && num(r[2]) != null) tufe[k] = num(r[2]); }
+  await sleep(300);
+  const u = (await getBuf(B + '/Uretici+Fiyatlari')).toString('utf8');
+  for (const r of rows(u)) { const k = ym(r[0]); if (!k || r.length < 5) continue; const v = num(r[4]) ?? num(r[3]); if (v != null) ufe[k] = v; }
+  if (Object.keys(tufe).length < 24 || Object.keys(ufe).length < 24) throw new Error('TCMB tablo yapısı değişmiş');
+  return { tufe, ufe, at: new Date().toISOString() };
+}
+
+/* ---------- TCMB Piyasa Katılımcıları Anketi (aylık): enflasyon, kur, faiz, büyüme beklentileri ---------- */
+async function tcmbSurvey() {
+  const base = 'https://www.tcmb.gov.tr';
+  const h = (await getBuf(base + '/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/Egilim+Anketleri/Piyasa+Katilimcilari+Anketi/')).toString('utf8');
+  const m = h.match(/href="([^"]*PKA_Rapor\.pdf[^"]*)"/); if (!m) throw new Error('anket raporu bağlantısı yok');
+  const url = base + m[1].replace(/&amp;/g, '&');
+  const t = await require('./pdr').pdfText(await getBuf(url), 8);
+  const n = re => { const x = t.match(re); return x ? parseFloat(x[1].replace(/\./g, '').replace(',', '.')) : null; };
+  const ay = (t.match(/Anketi\s*\|\s*([^\s|]+\s+20\d\d)/) || t.match(/((?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık|OCAK|ŞUBAT|MART|NİSAN|MAYIS|HAZİRAN|TEMMUZ|AĞUSTOS|EYLÜL|EKİM|KASIM|ARALIK)\s+20\d\d)/) || [])[1] || '';
+  const out = {
+    ay, url,
+    tufeYS: n(/cari yıl sonu tüketici enflasyonu \(TÜFE\) beklentisi.*?bu anket döneminde yüzde ([\d,]+)/i),
+    tufe12: n(/12 ay sonrası TÜFE beklentisi.*?bu anket döneminde yüzde ([\d,]+)/i),
+    tufe24: n(/24 ay sonrası TÜFE beklentisi.*?bu anket döneminde yüzde ([\d,]+)/i),
+    usdYS: n(/cari yıl sonu döviz kuru \(ABD Doları\/TL\) beklentisi.*?bu anket döneminde ([\d,]+) TL/i),
+    usd12: n(/12 ay sonrası döviz kuru beklentisi.*?bu anket döneminde ([\d,]+) TL/i),
+    faiz: n(/politika faiz oranı beklentisi bu anket döneminde yüzde ([\d,]+)/i),
+    gsyh: n(/büyüme beklentileri.*?sırasıyla yüzde ([\d,]+)/i)
+  };
+  if (out.tufe12 == null && out.tufeYS == null) throw new Error('anket metni okunamadı');
+  return out;
+}
+
+/* ---------- TEFAS fon kataloğu: tüm yatırım fonlarının dönem getirileri ve risk değeri ---------- */
+async function tefasCatalog() {
+  const per = { donemGetiri1a: '1', donemGetiri3a: '1', donemGetiri6a: '1', donemGetiri1y: '1', donemGetiriyb: '1', donemGetiri3y: '1', donemGetiri5y: '1' };
+  const out = [];
+  for (const tip of ['YAT', 'EMK']) {
+    const j = await getJSON('https://www.tefas.gov.tr/api/funds/fonGetiriBazliBilgiGetir', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: '*/*', Origin: 'https://www.tefas.gov.tr' }, body: JSON.stringify({ dil: 'TR', fonTipi: tip, islem: 1, ...per, calismaTipi: 2, getiriOrani: '1' }) });
+    if (j && j.errorMessage) throw new Error('TEFAS: ' + j.errorMessage);
+    for (const x of (j && j.resultList) || []) if (x.fonKodu) out.push([x.fonKodu, x.fonUnvan, (x.fonTurAciklama || '').replace(/ Şemsiye Fonu$/, ''), x.getiri1a, x.getiri3a, x.getiri6a, x.getiriyb, x.getiri1y, x.getiri3y, x.getiri5y, +x.riskDegeri || null, tip]);
+    await sleep(400);
+  }
+  if (out.length < 300) throw new Error('TEFAS katalog eksik');
+  return { at: new Date().toISOString(), cols: ['kod', 'ad', 'tur', 'g1a', 'g3a', 'g6a', 'gyb', 'g1y', 'g3y', 'g5y', 'risk', 'tip'], rows: out };
+}
+
 /* ---------- Fırsat radarı: İş Yatırım "Temel Değerler ve Oranlar" sayfası (tüm BIST, tek istek) ---------- */
 function trNum(x) { const t = String(x || '').replace(/&nbsp;/g, '').trim(); if (!t || /^A\/D$|^-$/.test(t)) return null; const v = parseFloat(t.replace(/\./g, '').replace(',', '.')); return isFinite(v) ? v : null; }
 function htmlTables(html) {
@@ -633,6 +687,13 @@ async function refreshAll(data, progress, only) {
       }
     } catch (e) { errors.push(`KAP fon: ${e.message || e}`); }
   }
+  // TCMB fiyat endeksleri ve TEFAS fon kataloğu: yalnız tam güncellemede
+  let macro = null, fonlar = null;
+  if (!want) {
+    try { progress && progress('TCMB enflasyon verileri'); macro = await tcmbPrices(); } catch (e) { errors.push(`TCMB enflasyon: ${e.message || e}`); }
+    try { progress && progress('TCMB beklenti anketi'); const pka = await tcmbSurvey(); macro = { ...(macro || {}), pka }; } catch (e) { errors.push(`TCMB anket: ${e.message || e}`); }
+    try { progress && progress('TEFAS fon kataloğu'); fonlar = await tefasCatalog(); } catch (e) { errors.push(`TEFAS katalog: ${e.message || e}`); }
+  }
   // KAP şirket takvimi: yalnız tam güncellemede
   let cal = null;
   if (!want) { try { progress && progress('KAP şirket takvimi'); cal = await kapCalendar(); } catch (e) { errors.push(`KAP takvim: ${e.message || e}`); } }
@@ -657,7 +718,7 @@ async function refreshAll(data, progress, only) {
       updated.push('fırsat radarı');
     } catch (e) { errors.push(`Fırsat radarı: ${e.message || e}`); radar = null; }
   }
-  return { patches, errors, updated, news, radar, bench, cal };
+  return { patches, errors, updated, news, radar, bench, cal, macro, fonlar };
 }
 
-module.exports = { refreshAll, yahooInsights, isyCard, kapCalendar, yfFinancials, secFinancials, usStock, radarFetch, radarTech, kapDetail, kapAttachment, kapFundScan, fundHolding, GOLD_UNITS, goldUnit, tefas, financials, mergeFin, lastQuarters, yahoo, gramMetal, coin, kapNews, kapTip, kapDate, emtiaSource, sid };
+module.exports = { refreshAll, tcmbPrices, tcmbSurvey, tefasCatalog, yahooInsights, isyCard, kapCalendar, yfFinancials, secFinancials, usStock, radarFetch, radarTech, kapDetail, kapAttachment, kapFundScan, fundHolding, GOLD_UNITS, goldUnit, tefas, financials, mergeFin, lastQuarters, yahoo, gramMetal, coin, kapNews, kapTip, kapDate, emtiaSource, sid };
