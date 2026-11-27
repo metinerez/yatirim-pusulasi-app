@@ -233,9 +233,9 @@ async function selftest() {
     result.cal = data.cal && data.cal.main ? { n: data.cal.main.items.length, ornek: data.cal.main.items.slice(0, 3) } : null;
     result.karne = await win.webContents.executeJavaScript("document.querySelector('#mBody')?.innerText.split('Karne')[1]?.slice(0,900)||null");
     // Fon seçici, vergi, aylık rapor, plan (simülatör + temettü)
-    await win.webContents.executeJavaScript("location.hash='fonsec'"); await wait(2500); await shot('19-fonsec');
-    await win.webContents.executeJavaScript("location.hash='vergi'"); await wait(2000); await shot('20-vergi');
-    await win.webContents.executeJavaScript("location.hash='rapor'"); await wait(2500); await shot('21-rapor');
+    await win.webContents.executeJavaScript("location.hash='fonsec'; scrollTo(0,0)"); await wait(2500); await shot('19-fonsec');
+    await win.webContents.executeJavaScript("location.hash='vergi'; scrollTo(0,0)"); await wait(2000); await shot('20-vergi');
+    await win.webContents.executeJavaScript("location.hash='rapor'; scrollTo(0,0)"); await wait(2500); await shot('21-rapor');
     await win.webContents.executeJavaScript("location.hash='plan'"); await wait(2000); await win.webContents.executeJavaScript("document.querySelector('#simBox')?.closest('.card')?.scrollIntoView()"); await wait(800); await shot('22-plan-sim');
     result.yeni = await win.webContents.executeJavaScript("(()=>({fon:document.querySelectorAll('#fsTable tbody tr').length, mine:document.querySelector('#fsMine')?.innerText.slice(0,300), vergi:document.querySelector('#vgFor')?.innerText.slice(0,500), vsum:document.querySelector('#vgSum')?.innerText.slice(0,300), rapor:document.querySelector('#rpBody')?.innerText.slice(0,500), sim:document.querySelector('#simBox')?.innerText.slice(0,300), div:document.querySelector('#divTable')?.innerText.slice(0,300)}))()");
     result.macro = data.macro && data.macro.main ? { ufe: Object.keys(data.macro.main.ufe || {}).length, pka: data.macro.main.pka, cpi: Object.keys((data.settings.cpi || {}).m || {}).length } : null;

@@ -209,6 +209,7 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
       <div><label for="fsTur">Şemsiye türü</label><select id="fsTur"><option value="">Tümü</option></select></div>
       <div><label for="fsRisk">En yüksek risk</label><select id="fsRisk"><option value="7">7 (hepsi)</option><option value="6">6</option><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></div>
       <div><label for="fsQ">Ara (kod, kurucu, ad)</label><input id="fsQ" placeholder="ör. altın, teknoloji, İş Portföy" style="width:240px"></div>
+      <label class="sm" style="display:flex;gap:8px;align-items:center;margin:0 0 10px"><input type="checkbox" id="fsSerbest" style="width:18px;height:18px"> Serbest fonları da göster <span class="xs mut">(yalnız nitelikli yatırımcılar alabilir)</span></label>
     </div>
     <div class="scroll" style="margin-top:14px"><table id="fsTable"></table></div>
     <p class="xs mut" style="margin-top:12px">Kaynak: TEFAS (yalnız TEFAS'ta işlem gören fonlar). Reel getiri, son 12 ayın TÜFE'siyle hesaplanır. Risk değeri 1 (en düşük) – 7 (en yüksek). Geçmiş getiri geleceğin göstergesi değildir; kısa dönem birinciler çoğu zaman ertesi yıl ortalamaya döner. Yönetim ücreti ve stopaj oranı için fonun KAP sayfasına bak. Seçtiğin fonu <b>Takibe al</b> ile İncele sekmesine ekleyip fiyat grafiğini ve içeriğini görebilirsin.</p>
@@ -228,6 +229,7 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
   <div class="card" style="margin-top:22px"><h3>Fonların vergi sonrası durumu</h3>
     <p class="sm mut" style="margin-top:0">Fon kazançları satışta stopaja tabi olabilir; oran fon türüne ve alış tarihine göre değişir (hisse yoğun fonlarda genelde %0). Fonun izahnamesinden ya da aracı kurumundan öğrendiğin oranı yaz.</p>
     <div class="scroll"><table id="taxTable"></table></div>
+  </div>
   <div class="card" style="margin-top:22px"><h3>BIST hisseleri</h3><p class="sm" style="margin:0">Borsa İstanbul'da işlem gören hisselerin alım-satım kazancı bireysel yatırımcı için şu an %0 stopaja tabidir ve beyan edilmez. BIST temettülerinden şirket %15 stopaj keser; yurt içi temettüler belirli bir tutarı aşarsa beyana tabi olabilir (bu durumda brüt temettünün yarısı istisnadır). Sınırı her yıl GİB duyurusundan kontrol et.</p></div>
 </section>
 
@@ -308,8 +310,6 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
     <h3 style="margin-top:20px">Senaryo testi</h3>
     <p class="sm mut" style="margin-top:0">Fonların içi dahil (dolaylı portföy) bugünkü dağılımına göre kaba bir tahmin. Diğer her şeyin sabit kaldığı varsayılır.</p>
     <div class="scroll"><table id="scTable"></table></div>
-  </div>
-
   </div>
 
   <div class="card" style="margin-top:22px"><h3>Yatırım günlüğü</h3>
