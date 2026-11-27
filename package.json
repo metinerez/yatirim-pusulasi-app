@@ -1,7 +1,7 @@
 {
   "name": "yatirim-pusulasi",
   "productName": "Yatirim Pusulasi",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Kişisel yatırım pusulası: fon, hisse, emtia ve coin portföy takibi",
   "author": "metinerez",
   "main": "main.js",

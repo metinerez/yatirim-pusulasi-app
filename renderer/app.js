@@ -974,7 +974,7 @@ function analystHtml(a) {
     const dB = bull(tr0) != null && bull(tr3) != null ? bull(tr0) - bull(tr3) : null;
     h += `<div class="row" style="gap:12px;align-items:center;margin-bottom:10px">${rl ? tagH(rl) : ''}<span class="sm"><b>${y.n}</b> analistin ortalaması${rm ? ` <span class="mut">(1 = güçlü al … 5 = güçlü sat: ${fmt(rm, 1)})</span>` : ''}</span></div>
     ${tot ? `<div class="cbar" role="img" aria-label="Öneri dağılımı">${[['sb', 'Güçlü al', 'up'], ['b', 'Al', 'up2'], ['h', 'Tut', 'mid'], ['s', 'Sat', 'dn2'], ['ss', 'Güçlü sat', 'dn']].filter(([k]) => tr0[k]).map(([k, l, c]) => `<i class="${c}" style="flex:${tr0[k]}" title="${l}: ${tr0[k]}">${tr0[k]}</i>`).join('')}</div>
-    <div class="row xs mut" style="justify-content:space-between;margin:4px 0 12px"><span>güçlü al · al</span><span>tut</span><span>sat</span></div>` : ''}
+    <div class="row xs mut" style="gap:12px;margin:5px 0 12px;flex-wrap:wrap"><span><i class="lg" style="background:var(--up)"></i>güçlü al</span><span><i class="lg" style="background:color-mix(in srgb,var(--up) 60%,var(--card))"></i>al</span><span><i class="lg" style="background:var(--mut)"></i>tut</span><span><i class="lg" style="background:var(--dn)"></i>sat</span></div>` : ''}
     <div class="lv"><span>Ortalama hedef fiyat</span><span>${n2(y.mean)} <span class="xs ${cls(up)}">${fpct(up)}</span></span>
       ${y.med ? `<span>Medyan hedef</span><span>${n2(y.med)}</span>` : ''}<span>En düşük – en yüksek</span><span>${n2(y.lo)} – ${n2(y.hi)}</span></div>
     ${pos != null ? `<div class="trng" role="img" aria-label="Fiyatın hedef aralığındaki yeri"><b style="left:${mp}%" title="ortalama hedef"></b><i style="left:${pos}%" title="bugünkü fiyat"></i></div><div class="row xs mut" style="justify-content:space-between"><span>en düşük hedef</span><span>▲ bugünkü fiyat · ┃ ortalama</span><span>en yüksek</span></div>` : ''}
@@ -995,7 +995,7 @@ function analystHtml(a) {
 // Kural tabanlı karne: güçlü yanlar ve dikkat edilecekler, sade dille
 function karne(a) {
   const r = C.ratios(a), good = [], bad = [], info = [];
-  const y = a.ins?.y, i = a.ins?.i, sk = sektorOf(a), inf = infl(), pio = C.piotroski(a);
+  const y = a.ins?.y, i = a.ins?.i, sk = sektorOf(a), inf = infl(), pio = isBist(a) ? C.piotroski(a) : null;
   if (r) {
     if (r.negNI) bad.push('Son 12 ayda <b>zarar</b> etmiş; F/K hesaplanamıyor, değerleme varlıklara (PD/DD) dayanır.');
     if (sk && r.pe && sk.fk) { const d = r.pe / sk.fk - 1; if (d < -.3) good.push(`F/K (${fx(r.pe, 1)}) ${esc(sk.ad)} sektörü medyanının (${fx(sk.fk, 1)}) <b>%${fmt(-d * 100, 0)} altında</b>.`); else if (d > .4) bad.push(`F/K (${fx(r.pe, 1)}) sektör medyanının (${fx(sk.fk, 1)}) %${fmt(d * 100, 0)} üstünde: piyasa yüksek büyüme fiyatlıyor.`); }
@@ -1007,13 +1007,13 @@ function karne(a) {
     if (r.nd != null && r.nd < 0) good.push('<b>Net nakit</b> pozisyonunda: nakdi finansal borcundan fazla.');
     else if (r.ndEbitda != null && r.ndEbitda > 3) bad.push(`Net borç ${fx(r.ndEbitda, 1)} yıllık FAVÖK'e eşit: borç yükü yüksek, faiz artışlarına duyarlı.`);
     if (r.cr != null && r.cr < 1) bad.push(`Cari oran ${fx(r.cr)}: kısa vadeli borçlar dönen varlıklardan fazla.`);
-    if (r.cfoNi != null) { if (r.cfoNi >= 1) good.push(`Kâr nakde dönüyor (işletme nakit akışı net kârın ${fx(r.cfoNi, 1)} katı).`); else if (r.cfoNi < .5) bad.push(`İşletme nakit akışı net kârın yalnız ${fpc(r.cfoNi, 0)}'i: kârın bir kısmı kâğıt üstünde (tek seferlik gelir, kur farkı ya da tahsil edilmemiş alacak) olabilir.`); }
+    if (r.cfoNi != null) { if (r.cfoNi >= 1) good.push(`Kâr nakde dönüyor (işletme nakit akışı net kârın ${fmt(r.cfoNi, 1)} katı).`); else if (r.cfoNi < .5) bad.push(`İşletme nakit akışı net kârın yalnız ${fpc(r.cfoNi, 0)}'i: kârın bir kısmı kâğıt üstünde (tek seferlik gelir, kur farkı ya da tahsil edilmemiş alacak) olabilir.`); }
     if (r.fcfY != null) { if (r.fcfY > .08) good.push(`Serbest nakit akışı verimi ${fpc(r.fcfY)}: fiyatına göre güçlü nakit üretiyor.`); else if (r.fcf < 0) info.push('Serbest nakit akışı eksi: yatırım harcamaları nakit üretimini aşıyor (büyüme dönemi ya da sıkışma).'); }
     if (r.fxpEq != null && r.fxpEq < -.3) bad.push(`Net döviz açığı özkaynağın ${fpc(-r.fxpEq, 0)}'i: TL'deki ani değer kaybı kârı vurabilir.`);
     else if (r.fxpEq != null && r.fxpEq > .3) info.push('Net döviz fazlası var: kur artışından olumlu etkilenir.');
   }
   if (pio) (pio.score >= 7 ? good : pio.score <= 3 ? bad : info).push(`Piotroski skoru <b>${pio.score}/${pio.n}</b>: ${pio.score >= 7 ? 'finansallar geçen yıla göre belirgin iyileşmiş' : pio.score <= 3 ? 'finansallar geçen yıla göre zayıflamış' : 'karışık tablo'}.`);
-  if (i?.tahmin?.netkar && r) { const cur = C.finSorted(a.fin).slice(-1)[0]; const ttmNi = (() => { const s = C.finSorted(a.fin); const c = s[s.length - 1]; if (!c || c.ni == null) return null; if (c.m === 12) return c.ni; const fy = s.find(f => f.y === c.y - 1 && f.m === 12), py = s.find(f => f.y === c.y - 1 && f.m === c.m); return fy && py ? c.ni + fy.ni - py.ni : null; })(); if (ttmNi > 0 && cur) { const g = i.tahmin.netkar * 1e6 / ttmNi - 1; info.push(`İş Yatırım yıl sonu net kâr tahmini son 12 aya göre ${fpct(g)} ${g >= 0 ? 'artış' : 'düşüş'} öngörüyor.`); } }
+  if (i?.tahmin?.netkar && r) { const cur = C.finSorted(a.fin).slice(-1)[0]; const ttmNi = (() => { const s = C.finSorted(a.fin); const c = s[s.length - 1]; if (!c || c.ni == null) return null; if (c.m === 12) return c.ni; const fy = s.find(f => f.y === c.y - 1 && f.m === 12), py = s.find(f => f.y === c.y - 1 && f.m === c.m); return fy && py ? c.ni + fy.ni - py.ni : null; })(); if (ttmNi > 0 && cur) { const g = i.tahmin.netkar * 1e6 / ttmNi - 1; info.push(`İş Yatırım yıl sonu net kâr tahmini son 12 aya göre ${fpc(Math.abs(g))} ${g >= 0 ? 'artış' : 'düşüş'} öngörüyor.`); } }
   if (y && y.mean && y.px && y.n >= 3) { const up = y.mean / y.px - 1; (up > .25 ? good : up < -.05 ? bad : info).push(`${y.n} analistin ortalama hedefi bugünkü fiyatın ${fpct(up)} ${up >= 0 ? 'üstünde' : 'altında'}.`); }
   if (y?.beta != null && a.mkt === 'US') info.push(`Beta ${fmt(y.beta, 2)}: endeks %10 hareket ettiğinde bu hisse geçmişte ortalama %${fmt(y.beta * 10, 0)} oynamış${y.beta > 1.3 ? ' (oynak)' : y.beta < .7 ? ' (sakin)' : ''}.`);
   const dvv = i?.temettu?.filter(d => /\d{4}$/.test(d.d)); if (dvv && dvv.length) { const yrs = new Set(dvv.map(d => d.d.slice(-4))); const last = dvv[0]; info.push(`Son temettü ${esc(last.d)} (verim %${fmt(last.verim, 2)}); listede son ${yrs.size} dağıtım yılı var.`); }
@@ -1053,7 +1053,7 @@ function rMali() {
   const s = sig(a), r = s.rat, f = r ? C.fundScore(r) : null, fin = C.finSorted(a.fin), pts = {};
   if (f) f.items.forEach(x => pts[x.k] = x.p);
   const LK = { 'FD/Satışlar': 'evSales', 'Aktif kârlılığı': 'roa', 'Brüt marj': 'gm', 'FAVÖK marjı': 'em', 'Esas faaliyet marjı': 'om', 'Asit-test oranı': 'qr', 'Borç / özkaynak': 'de', 'FAVÖK': 'ebG', 'Net kâr': 'niG' };
-  const sk = sektorOf(a), pio = C.piotroski(a);
+  const sk = sektorOf(a), pio = isBist(a) ? C.piotroski(a) : null;
   const SKN = { pe: sk?.fk && `sektör medyanı ${fx(sk.fk, 1)}`, pb: sk?.pddd && `sektör medyanı ${fx(sk.pddd)}`, evEbitda: sk?.fdf && `sektör medyanı ${fx(sk.fdf, 1)}`, roe: sk?.roe && `sektör medyanı ${fpc(sk.roe)}` };
   const card = (k, l, v, note, cl) => `<div class="rat ${cl != null ? cl : pts[k] > 0 ? 'g' : pts[k] < 0 ? 'b' : ''}" title="${esc(HAP[k || LK[l]] || '')}"><span class="xs mut">${l}${hapI(k || LK[l])}</span><b>${v}</b><span class="xs mut">${note}${SKN[k] ? ' · ' + SKN[k] : ''}</span></div>`;
   const ep = editP ? fin.find(x => C.pkey(x) === editP) : null;
