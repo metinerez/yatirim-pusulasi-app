@@ -469,6 +469,6 @@ const C = (() => {
     return Object.values(P).map(p => ({ ...p, be: p.qty > 0 ? p.rcost / p.qty : null }));
   }
 
-  return { cpiMonths, cpiFactor, cpiGap, realPositions, ULKE, region, ISIN, ccOf, catOf, holdKey, normWeights, latestHold, lookThrough, overlap, holdChange, norm, num, toISO, parseDates, sma, ema, rsi, macd, boll, atr, levels, stats, technical, FIN, FIN_ALIAS, parsePeriod, pkey, finSorted, ttm, yoy, ratios, fundScore, RULES, label, combined, positions };
+  return { cpiMonths, cpiFactor, cpiGap, realPositions, ULKE, region, ISIN, ccOf, catOf, holdKey, normWeights, latestHold, lookThrough, overlap, holdChange, norm, num, toISO, parseDates, sma, ema, rsi, macd, boll, atr, levels, stats, technical, FIN, FIN_ALIAS, parsePeriod, pkey, finSorted, ttm, yoy, ratios, piotroski, fundScore, RULES, label, combined, positions };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = C;
