@@ -13,7 +13,7 @@
   "dependencies": {
     "xlsx": "0.18.5",
     "pdfjs-dist": "4.10.38",
-    "electron-updater": "6.3.9"
+    "electron-updater": "6.8.11"
   },
   "devDependencies": {
     "electron": "33.2.1",
