@@ -1,0 +1,381 @@
+{
+ "started": "2026-11-27T21:25:57.307Z",
+ "refresh": {
+  "errors": [],
+  "updated": [
+   "AFT",
+   "YAY",
+   "KUT",
+   "THYAO",
+   "THYAO mali",
+   "ALTIN",
+   "BTC",
+   "AKBNK",
+   "AKBNK mali",
+   "NVDA",
+   "NVDA mali",
+   "ASML.AS",
+   "ASML.AS mali",
+   "CEYREK",
+   "CUMHURIYET",
+   "AFT içerik",
+   "YAY içerik",
+   "KUT içerik",
+   "fırsat radarı"
+  ]
+ },
+ "refreshMs": 73402,
+ "news": [],
+ "kapLink": 200,
+ "plan": {
+  "bm": [
+   "Senin portföyün ₺62.855 +%19,9 ",
+   "Dolar (USD/TL) ₺62.607 +%19,6 ₺248",
+   "Gram altın ₺76.326 +%33,3 −₺13.471",
+   "BIST 100 ₺52.910 +%9,4 ₺9.945",
+   "Mevduat (net %36,0) ₺79.204 +%36,0 −₺16.349",
+   "Enflasyon (TÜFE) ₺72.233 +%29,3 −₺9.378"
+  ],
+  "risk": "Gram altın portföyünün %28,6'i. Tek varlıkta %10'u aşan pay, o varlıktaki bir düşüşü büyütür.\nNVIDIA Corporation portföyünün %24,3'i. Tek varlıkta %10'u aşan pay, o varlıktaki bir düşüşü büyütür.\nBitcoin portföyünün %19,3'i. Tek varlıkta %10'u aşan pay, o varlıktaki bir düşüşü büyütür.\nPortföyünün %88'i TL dışı (yabancı hisse, altın, kripto, döviz). TL güçlenirse ya da yurt dışı piyasalar düşerse ",
+  "sc": [
+   "Yurt dışı hisseler %30 düşer (dolar bazında) ₺22.579 −₺6.774 −%10,8",
+   "Dolar/TL %20 yükselir ₺55.245 ₺11.049 +%17,6",
+   "Kriz: yurt dışı hisse −%30, dolar/TL +%20 birlikte — ₺2.920 +%4,6",
+   "BIST hisseleri %20 düşer ₺6.195 −₺1.239 −%2,0",
+   "Altın %15 düşer ₺20.532 −₺3.080 −%4,9",
+   "Kripto %50 düşer ₺12.134 −₺6.067 −%9,7"
+  ]
+ },
+ "radar": {
+  "n": 629,
+  "top": 100,
+  "tech": 100,
+  "ornek": {
+   "k": "THYAO",
+   "ad": "Türk Hava Yolları",
+   "sek": "Havayolları ve Hizm.",
+   "px": 314,
+   "mc": 433320,
+   "mcUsd": 8547.5,
+   "ha": 49.1,
+   "ser": 1380,
+   "fk": 3,
+   "fdf": 5.9,
+   "fds": 0.8,
+   "pddd": 0.4,
+   "donem": "9/2026",
+   "g1": 1.37,
+   "g5": -4.56,
+   "g21": 24.11,
+   "gy": 16.95,
+   "fkT": 5.8,
+   "fdfT": 8.9,
+   "pdT": 0.4
+  }
+ },
+ "ins": {
+  "THYAO": {
+   "y": {
+    "n": 14,
+    "mean": 456.81403,
+    "rec": null,
+    "earn": {
+     "d": "2026-11-04",
+     "est": false,
+     "eps": null
+    }
+   },
+   "i": {
+    "oneri": "",
+    "hedef": null,
+    "tahmin": true
+   },
+   "finVer": 2,
+   "cfo": 138336000000
+  },
+  "AKBNK": {
+   "y": {
+    "n": 14,
+    "mean": 89.71786,
+    "rec": "buy",
+    "earn": {
+     "d": "2027-02-02",
+     "est": false,
+     "eps": 4.25924
+    }
+   },
+   "finVer": 2
+  },
+  "NVDA": {
+   "y": {
+    "n": 59,
+    "mean": 242.4278,
+    "rec": "buy",
+    "earn": {
+     "d": "2026-11-17",
+     "est": false,
+     "eps": 2.87956
+    }
+   },
+   "finVer": 2
+  },
+  "ASML.AS": {
+   "y": {
+    "n": 33,
+    "mean": 2095.9395,
+    "rec": "strong_buy",
+    "earn": {
+     "d": "2027-01-27",
+     "est": false,
+     "eps": 15.38838
+    }
+   },
+   "finVer": 2
+  }
+ },
+ "cal": {
+  "n": 83,
+  "ornek": [
+   {
+    "d": "2026-11-02",
+    "tip": "Sermaye artırımı/azaltımı",
+    "firma": "MERCAN KİMYA SANAYİ VE TİCARET A.Ş.",
+    "idx": 1687541
+   },
+   {
+    "d": "2026-11-03",
+    "tip": "Genel kurul",
+    "firma": "EYG GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+    "idx": 1698957
+   },
+   {
+    "d": "2026-11-03",
+    "tip": "Genel kurul",
+    "firma": "SMARTİKS YAZILIM A.Ş.",
+    "idx": 1691700
+   }
+  ]
+ },
+ "karne": " · otomatik yorum\nGüçlü yanlar\nF/K (2,9x) Havayolları ve Hizm. sektörü medyanının (9,1x) %68 altında.\nPD/DD (0,38x) sektör medyanının (0,85x) %56 altında.\nSatışlar enflasyonun üstünde büyüyor (+%42,0).\nKâr nakde dönüyor (işletme nakit akışı net kârın 1,6 katı).\n14 analistin ortalama hedefi bugünkü fiyatın +%45,5 üstünde.\nDikkat edilecekler\nÖzkaynak kârlılığı %12,9, enflasyon beklentisinin (%24,0, TCMB piyasa katılımcıları anketi) altında: ortakların parası reelde eriyor.\nNet borç 4,1x yıllık FAVÖK'e eşit: borç yükü yüksek, faiz artışlarına duyarlı.\nCari oran 0,97x: kısa vadeli borçlar dönen varlıklardan fazla.\nNet döviz açığı özkaynağın %31'i: TL'deki ani değer kaybı kârı vurabilir.\nBilgi notları\nSerbest nakit akışı eksi: yatırım harcamaları nakit üretimini aşıyor (büyüme dönemi ya da sıkışma).\nPiotroski skoru 4/9: karışık tablo.\nİş Yatırım yıl sonu net kâr tahmini son 12 aya göre %13,5 ",
+ "yeni": {
+  "fon": 150,
+  "mine": "Fon1 yılTürünün medyanıTüründe sıraReel (TÜFE sonrası)Mevduata göre3 yıl (yıllık)DeğerlendirmeAFTHisse Senedi · risk 6−%8,4+%5,5146 / 170−%29,4−44,4 puan+%32,0TÜFE +%36,8Enflasyonun gerisindeYAYHisse Senedi · risk 7+%11,0+%5,561 / 170−%14,5−25,0 puan+%34,5TÜFE +%36,8Enflasyonun gerisindeKUTKatılım ·",
+  "vergi": "HisseAlış → satışAdetAlış bedeliYİ-ÜFE artışıEndeksli maliyetSatış bedeliKazançNVDA03.02.2025 → 15.06.20263₺12.906%41,3₺18.234₺20.990₺2.756Toplam (zararlar kârdan düşülür)₺2.756",
+  "vsum": "Beyana girecek diğer gelirin (kira vb., TL)Tek işverenden alınan ve sınırı aşmayan maaş genelde beyana girmez.\n    Yurt dışı hisse kazancı₺2.756Yurt dışı temettü ₺0Bu gelirlerden doğan tahmini vergi₺413Ortalama oran%15,0\n    2026 ücret dışı gelir tarifesiyle (%15–%40) hesaplandı. Beyan zorunlu görün",
+  "rapor": "Kasım 2026 raporu (ay devam ediyor, bugüne kadar)\n    \n      Ay başı değer₺73.74831.10.2026\n      Bugünkü değer₺62.85527.11.2026\n      Net para girişi₺00 işlem\n      Piyasa kaynaklı değişim−₺10.893aylık −%14,8\n      Kasım 2026 TÜFE—henüz açıklanmadı\n    \n    \n      Varlık sınıflarıSınıfAy başıBugünPayFonlar₺14.017₺11.290%18,0Hisseler₺25.327₺21.472%34,2Emtia₺18.935₺17.959%28,6Coin₺15.469₺12.134%19,3\n      Ayın en iyileri ve en kötüleriTHYAO+%24,7ALTIN−%5,2KUT−%12,0BTC−%21,6YAY−%23,9NVDA−%25,0\n   ",
+  "sim": "36 ay × ₺10.000\n₺360.000\ntoplam yatırılan\nBugünkü değer\n₺370.418\n+%2,9 · yıllık +%1,8\nEnflasyonu yakalamak için\n₺573.157\nenflasyonun gerisinde (−₺202.739)\nTek seferde ilk ay yatırsaydın\n₺477.047\ntek seferlik daha iyi olurdu\n\nOrtalama maliyetin 10.440,96, aynı ayların ortalama fiyatı 10.754,46: düzen",
+  "div": "Hisse\tAdet\tSon 12 ay hisse başı\tVerim\tYıllık tahmini (net)\tYaklaşan\nNVDA\nYahoo verim\t2\t51,18 TL*\t%0,67\t₺102\t—\nTHYAO\t20\tdağıtmamış\t—\t—\t—\nToplam\t₺102\t"
+ },
+ "macro": {
+  "ufe": 285,
+  "pka": {
+   "ay": "Kasım 2026",
+   "url": "https://www.tcmb.gov.tr/wps/wcm/connect/085d78c0-9809-4b33-a6b6-21e0a22a6405/PKA_Rapor.pdf?MOD=AJPERES&CACHEID=ROOTWORKSPACE-085d78c0-9809-4b33-a6b6-21e0a22a6405-q7jJcTe",
+   "tufeYS": 30.04,
+   "tufe12": 24.04,
+   "tufe24": 18.02,
+   "usdYS": 51.61,
+   "usd12": 60.77,
+   "faiz": 35,
+   "gsyh": 2.9,
+   "at": "2026-11-27T21:27:16.876Z"
+  },
+  "cpi": 142
+ },
+ "fonlar": 1389,
+ "detailClick": "1692455",
+ "assets": {
+  "AFT": {
+   "type": "fon",
+   "name": "AK PORTFÖY YENİ TEKNOLOJİLER YABANCI HİSSE SENEDİ FONU",
+   "px": 1258,
+   "last": 0.742823,
+   "lastDate": "2026-11-27",
+   "fin": [],
+   "hold": [
+    {
+     "date": "2026-10-31",
+     "src": "kap",
+     "n": 36,
+     "sum": 100.37,
+     "top": [
+      "US5949181045 MSFT · MICROSOFT CORP 0.133",
+      "US5951121038 MU · MICRON TECHNOLOGY 0.11259999999999999",
+      "US67066G1040 NVDA 0.1117",
+      "US02079K3059 GOOGL 0.0693",
+      "US0231351067 AMZN · AMAZON.COM INC 0.0669"
+     ]
+    }
+   ]
+  },
+  "YAY": {
+   "type": "fon",
+   "name": "YAPI KREDİ PORTFÖY YABANCI TEKNOLOJİ SEKTÖRÜ HİSSE SENEDİ FONU",
+   "px": 1258,
+   "last": 1367.471369,
+   "lastDate": "2026-11-27",
+   "fin": [],
+   "hold": [
+    {
+     "date": "2026-10-31",
+     "src": "kap",
+     "n": 32,
+     "sum": 100.02,
+     "top": [
+      "US5951121038 MU · MICRON TECHNOLOGY INC 0.0602",
+      "IE00BKVD2N49 STX · Seagate Technology 0.051",
+      "US67066G1040 NVDA · NVIDIA Corporation 0.0487",
+      "US80004C2008 SNDK · SanDisk Corporation 0.048600000000000004",
+      "US9581021055 WDC · Western Digital Corp 0.045700000000000005"
+     ]
+    }
+   ]
+  },
+  "KUT": {
+   "type": "fon",
+   "name": "KUVEYT TÜRK PORTFÖY KIYMETLİ MADENLER KATILIM FONU",
+   "px": 1258,
+   "last": 9.611406,
+   "lastDate": "2026-11-27",
+   "fin": [],
+   "hold": [
+    {
+     "date": "2026-10-31",
+     "src": "kap",
+     "n": 16,
+     "sum": 100.18,
+     "top": [
+      "TRKAU0000014 ALTIN LBMA 995 0.2778",
+      " GUMUS GR 0.25489999999999996",
+      "TRYFNBK00030 GMSTR · FINANSBANK A.S. 0.0941",
+      "TRMAUXSAFT15 ALTIN-KAYDİ GR 0.0746",
+      "TRD270127T13 HAZINE 0.055"
+     ]
+    }
+   ]
+  },
+  "THYAO": {
+   "type": "hisse",
+   "name": "Test hissesi",
+   "px": 1252,
+   "last": 309.75,
+   "lastDate": "2026-11-26",
+   "shares": 1380000000,
+   "fin": [
+    "2023/12 rev=504398000000 ni=163003000000 ta=1048943000000 eq=457257000000 tl=591831000000",
+    "2024/3 rev=147238000000 ni=6931000000 ta=1165976000000 eq=515404000000 tl=650455000000",
+    "2024/6 rev=330113000000 ni=37326000000 ta=1233843000000 eq=557648000000 tl=676076000000",
+    "2024/9 rev=551928000000 ni=88866000000 ta=1353669000000 eq=618586000000 tl=734978000000",
+    "2024/12 rev=975710686451 ni=148403104528 ta=1831976887193 eq=889919927396 tl=941893344386",
+    "2025/3 rev=176712000000 ni=-1818000000 ta=1534946000000 eq=717346000000 tl=817510000000",
+    "2025/6 rev=408036000000 ni=25013000000 ta=1652589000000 eq=752073000000 tl=900469000000",
+    "2025/9 rev=690825000000 ni=81064000000 ta=1794446000000 eq=843939000000 tl=950495000000",
+    "2025/12 rev=1187816196737 ni=146952895515 ta=2482297808574 eq=1132805828348 tl=1349449712373",
+    "2026/3 rev=257961000000 ni=9915000000 ta=2158033000000 eq=966388000000 tl=1191670000000",
+    "2026/6 rev=585069000000 ni=18864000000 ta=2360037000000 eq=1018517000000 tl=1341584000000",
+    "2026/9 rev=981030000000 ni=80330000000 ta=2583379000000 eq=1135117000000 tl=1448330000000"
+   ],
+   "hold": []
+  },
+  "ALTIN": {
+   "type": "emtia",
+   "name": "Gram altın",
+   "px": 1257,
+   "last": 5986.27099,
+   "lastDate": "2026-11-27",
+   "fin": [],
+   "hold": []
+  },
+  "BTC": {
+   "type": "coin",
+   "name": "Bitcoin",
+   "px": 1825,
+   "last": 3033499.536525,
+   "lastDate": "2026-11-27",
+   "fin": [],
+   "hold": []
+  },
+  "AKBNK": {
+   "type": "hisse",
+   "name": "Test bankası",
+   "px": 1252,
+   "last": 60.650001525878906,
+   "lastDate": "2026-11-26",
+   "shares": 5200000000,
+   "fin": [
+    "2023/12 rev=220590949000 ni=66478940000 ta=1789174174000 eq=211195427000 tl=1577978747000",
+    "2024/3 rev=95819158000 ni=13184293000 ta=1959704440000 eq=213100886000 tl=1746603554000",
+    "2024/6 rev=211170727000 ni=24108123000 ta=2180575592000 eq=221093198000 tl=1959482394000",
+    "2024/9 rev=337670158000 ni=33138650000 ta=2277956968000 eq=230945078000 tl=2047011890000",
+    "2024/12 rev=480072926000 ni=42366070000 ta=2515596654000 eq=240347891000 tl=2275248763000",
+    "2025/3 rev=140202334000 ni=13727079000 ta=2706720796000 eq=242925730000 tl=2463795066000",
+    "2025/6 rev=297916000000 ni=24851000000 ta=2818347573000 eq=258900893000 tl=2559446680000",
+    "2025/12 rev=628173603000 ni=57247061000 ta=3336006508000 eq=310158190000 tl=3025848318000",
+    "2026/3 rev=162844257000 ni=19178575000 ta=3419802978000 eq=302597564000 tl=3117205414000",
+    "2026/6 rev=349461000000 ni=34378000000 ta=3727680000000 eq=324746000000 tl=3402934000000",
+    "2026/9 rev=539637000000 ni=45978000000 ta=3879556000000 eq=330258000000 tl=3549298000000"
+   ],
+   "hold": []
+  },
+  "NVDA": {
+   "type": "hisse",
+   "name": "NVIDIA Corporation",
+   "px": 1255,
+   "last": 7638.722019,
+   "lastDate": "2026-11-27",
+   "shares": 24147000000,
+   "fin": [
+    "2023/12 rev=1369173235542.2974 ni=221715307067.8711 ta=2090357091499.3286 eq=1121824634044.6472 tl=undefined",
+    "2024/12 rev=3092339729209.9 ni=1510587806396.4844 ta=3336287477783.203 eq=2181520253471.3745 tl=undefined",
+    "2025/12 rev=6623897075649.262 ni=3699315837707.5195 ta=5664755032985.6875 eq=4026559103427.8867 tl=undefined",
+    "2026/3 rev=2236543008247.3755 ni=953000203800.2014 ta=undefined eq=undefined tl=undefined",
+    "2026/6 rev=4609170892467.499 ni=2294154471965.79 ta=7143821501083.374 eq=5082549315937.042 tl=2061272185146.3318",
+    "2026/9 rev=7502738382099.151 ni=3913874125934.6006 ta=8179711150039.673 eq=6035092688747.406 tl=2144618461292.2668",
+    "2026/12 rev=10960796698173.523 ni=6094480717426.3 ta=10497113243488.312 eq=7984035209392.548 tl=2513078034095.764",
+    "2027/3 rev=4142695692844.3906 ni=2960315573146.8203 ta=13170640473014.832 eq=9922064545280.457 tl=3248575927734.375",
+    "2027/6 rev=9026777323196.41 ni=5990018697750.092 ta=16256686086364.746 eq=11622998597442.627 tl=4633687488922.119"
+   ],
+   "hold": []
+  },
+  "ASML.AS": {
+   "type": "hisse",
+   "name": "ASML Holding N.V.",
+   "px": 1281,
+   "last": 66537.638588,
+   "lastDate": "2026-11-27",
+   "shares": 385417742,
+   "fin": [
+    "2022/12 rev=1175983336292.2668 ni=312371441524.5056 ta=2016145989814.7583 eq=489357116920.4712 tl=1526788872894.287",
+    "2023/12 rev=1530615620222.0918 ni=435382762012.4817 ta=2219263517427.4443 eq=747154365058.8989 tl=1472109152368.5454",
+    "2024/12 rev=1569738418737.4116 ni=420531205619.812 ta=2698695529159.546 eq=1026212554809.5703 tl=1672482974349.9756",
+    "2025/6 rev=857169185188.2935 ni=258002748357.77283 ta=undefined eq=undefined tl=undefined",
+    "2025/9 rev=1274612333457.9468 ni=375998752681.7322 ta=2504719984277.725 eq=1054910382738.1134 tl=1449809601539.6118",
+    "2025/12 rev=1814361436597.8242 ni=533711839939.11743 ta=2808499295009.6133 eq=1089273351848.6023 tl=1719225943161.0107",
+    "2026/3 rev=486918884588.2416 ni=153108771532.05872 ta=2669308997793.1978 eq=1156882924013.1377 tl=1512426073780.0598",
+    "2026/6 rev=1004918288837.4329 ni=315154025575.6378 ta=2788960111991.8823 eq=1212195807376.8616 tl=1576764304615.0208",
+    "2026/9 rev=1652632763973.236 ni=590657616937.6373 ta=3275851226280.2124 eq=1225442240434.6465 tl=2050408985845.566"
+   ],
+   "hold": []
+  },
+  "CEYREK": {
+   "type": "emtia",
+   "name": "Çeyrek altın",
+   "px": 1257,
+   "last": 9596.257088,
+   "lastDate": "2026-11-27",
+   "fin": [],
+   "hold": []
+  },
+  "CUMHURIYET": {
+   "type": "emtia",
+   "name": "Cumhuriyet altını",
+   "px": 1257,
+   "last": 40360.870267,
+   "lastDate": "2026-11-27",
+   "fin": [],
+   "hold": []
+  }
+ },
+ "status": "Bu bilgisayarda · güncelleme 27.11 21:27",
+ "logs": []
+}
