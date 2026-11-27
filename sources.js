@@ -347,6 +347,69 @@ async function foreignFin(sym, fx, cur) {
   }
 }
 
+
+/* ---------- Analist beklentileri ---------- */
+// Yahoo konsensüsü (çok sayıda aracı kurumun ortalaması): oturum çerezi + crumb ile
+let yCk = null, yCrumb = null, yAt = 0;
+async function yahooSession() {
+  if (yCrumb && Date.now() - yAt < 6 * 3600e3) return;
+  const a = await fetch('https://fc.yahoo.com', { headers: { 'User-Agent': 'Mozilla/5.0' }, redirect: 'manual', signal: AbortSignal.timeout(20000) }).catch(() => null);
+  yCk = a ? (a.headers.get('set-cookie') || '').split(';')[0] : '';
+  const c = await fetch('https://query2.finance.yahoo.com/v1/test/getcrumb', { headers: { 'User-Agent': 'Mozilla/5.0', Cookie: yCk }, signal: AbortSignal.timeout(20000) });
+  yCrumb = (await c.text()).trim(); yAt = Date.now(); if (!c.ok || !yCrumb || yCrumb.length > 40) { yCrumb = null; throw new Error('Yahoo oturumu açılamadı'); }
+}
+async function yahooInsights(sym) {
+  await yahooSession();
+  const j = await getJSON(`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=financialData,recommendationTrend,calendarEvents,defaultKeyStatistics,summaryDetail&crumb=${encodeURIComponent(yCrumb)}`, { headers: { 'User-Agent': 'Mozilla/5.0', Cookie: yCk } });
+  const d = j && j.quoteSummary && j.quoteSummary.result && j.quoteSummary.result[0]; if (!d) return null;
+  const v = x => x && typeof x === 'object' ? (x.raw ?? null) : (x ?? null);
+  const fd = d.financialData || {}, ks = d.defaultKeyStatistics || {}, sd = d.summaryDetail || {}, ce = (d.calendarEvents || {}).earnings || {};
+  const tr = ((d.recommendationTrend || {}).trend || []).map(t => ({ p: t.period, sb: t.strongBuy, b: t.buy, h: t.hold, s: t.sell, ss: t.strongSell }));
+  const ed = (ce.earningsDate || [])[0];
+  return {
+    n: v(fd.numberOfAnalystOpinions), mean: v(fd.targetMeanPrice), med: v(fd.targetMedianPrice), hi: v(fd.targetHighPrice), lo: v(fd.targetLowPrice), px: v(fd.currentPrice),
+    rec: fd.recommendationKey && fd.recommendationKey !== 'none' ? fd.recommendationKey : null, recMean: v(fd.recommendationMean), trend: tr,
+    fpe: v(ks.forwardPE) ?? v(sd.forwardPE), feps: v(ks.forwardEps), beta: v(ks.beta) ?? v(sd.beta), ins: v(ks.heldPercentInsiders), inst: v(ks.heldPercentInstitutions),
+    divY: v(sd.dividendYield), payout: v(sd.payoutRatio),
+    earn: ed ? { d: new Date(v(ed) * 1000).toISOString().slice(0, 10), est: !!ce.isEarningsDateEstimate, eps: v(ce.earningsAverage) } : null,
+    cur: (d.summaryDetail && d.summaryDetail.currency) || null
+  };
+}
+// İş Yatırım şirket kartı: kurumun kendi önerisi, hedef fiyatı, yatırım teması, gelecek yıl tahminleri ve temettü geçmişi
+async function isyCard(sym) {
+  const html = (await getBuf(`https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/sirket-karti.aspx?hisse=${encodeURIComponent(sym)}`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' } })).toString('utf8');
+  const out = {};
+  const i = html.indexOf('id="Oneri_Aciklama"');
+  if (i > 0) {
+    const seg = html.slice(i, i + 9000), txt = x => ent(String(x || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+    out.oneri = txt((seg.match(/^[^>]*>([^<]*)</) || [])[1]);
+    const li = k => { const m = seg.match(new RegExp(k + '\\s*<span>([^<]*)</span>')); return m ? txt(m[1]) : null; };
+    out.tarih = li('Son Öneri Tarihi'); out.hedef = trNum(li('Hedef Fiyat')); out.pot = li('Getiri Pot');
+    out.analist = txt((seg.match(/<h4>([\s\S]*?)<\/h4>/) || [])[1]) || null;
+    const tm = seg.match(/Yatırım Teması<\/b><\/p>([\s\S]*?)<\/div>/); if (tm) { const t = txt(tm[1]); out.tema = t.length > 420 ? t.slice(0, 420).replace(/\s\S*$/, '') + '…' : t; }
+    out.oTarih = li('Önceki Öneri Tarihi'); out.oHedef = trNum(li('Önceki Hedef Fiyat'));
+    const om = seg.match(/Önceki Hedef Fiyat[\s\S]{0,200}?<\/li>[\s\S]{0,400}?>(AL|TUT|SAT|ENDEKSE PARALEL|ENDEKSİN ÜZERİNDE GETİRİ|ENDEKSİN ALTINDA GETİRİ|GÖZDEN GEÇİRİLİYOR)</i); if (om) out.oOneri = om[1];
+  }
+  const T = htmlTables(html), find = re => T.find(t => t[0] && re.test(t[0].join(' ')));
+  const est = find(/^Kod Satışlar \(mn TL\) Net Kar \(mn TL\) FAVÖK/); if (est && est[1]) out.tahmin = { satis: trNum(est[1][1]), netkar: trNum(est[1][2]), favok: trNum(est[1][3]), tur: est[1][4] };
+  const mul = T.find(t => t[0] && /^Kod F\/K FD\/FAVÖK FD\/Satışlar PD\/DD Tahmin/.test(t[0].join(' '))); if (mul && mul[1]) out.carpan = { fk: trNum(mul[1][1]), fdfavok: trNum(mul[1][2]), pddd: trNum(mul[1][4]), tur: mul[1][5] };
+  const dv = find(/^Kod Dağ\. Tarihi Temettü Verim/); if (dv) { const seen = new Set(); out.temettu = dv.slice(1).filter(r => r[1] && !seen.has(r[1]) && seen.add(r[1])).slice(0, 8).map(r => ({ d: r[1], verim: trNum(r[2]), hb: trNum(r[3]) })); }
+  if (!out.oneri && !out.tahmin) return null;
+  return out;
+}
+// KAP şirket işlemleri takvimi (genel kurul, temettü ödemesi, sermaye artırımı …): bu ay ve gelecek ay
+const CA_TIP = { generalMeeting: 'Genel kurul', dividendPayment: 'Temettü ödemesi', capitalIncreaseDecrease: 'Sermaye artırımı/azaltımı', mergerDemergerAssignSubject: 'Birleşme/bölünme', retirementRight: 'Ayrılma hakkı', saleOutRight: 'Satma hakkı', tenderOffer: 'Pay alım teklifi' };
+async function kapCalendar() {
+  const now = new Date(), items = [];
+  for (const k of [0, 1]) {
+    const d = new Date(now.getFullYear(), now.getMonth() + k, 1);
+    const L = await getJSON(`https://www.kap.org.tr/tr/api/ca/allCa/${d.getFullYear()}/${pad(d.getMonth() + 1)}`);
+    for (const day of L || []) for (const [key, tip] of Object.entries(CA_TIP)) { const x = day[key]; if (!x || !x.companies) continue; x.companies.forEach((c, i) => items.push({ d: String(day.date).replace(/\//g, '-'), tip, firma: c, idx: (x.disclosureIndex || [])[i] || null })); }
+    await sleep(300);
+  }
+  return { at: new Date().toISOString(), items };
+}
+
 /* ---------- Fırsat radarı: İş Yatırım "Temel Değerler ve Oranlar" sayfası (tüm BIST, tek istek) ---------- */
 function trNum(x) { const t = String(x || '').replace(/&nbsp;/g, '').trim(); if (!t || /^A\/D$|^-$/.test(t)) return null; const v = parseFloat(t.replace(/\./g, '').replace(',', '.')); return isFinite(v) ? v : null; }
 function htmlTables(html) {
@@ -367,6 +430,8 @@ async function radarFetch(progress) {
   for (const r of basic.slice(1)) { if (!/^[A-Z0-9]{3,6}$/.test(r[0])) continue; rows[r[0]] = { k: r[0], ad: r[1], sek: r[2], px: trNum(r[3]), mc: trNum(r[4]), mcUsd: trNum(r[5]), ha: trNum(r[6]), ser: trNum(r[7]) }; }
   for (const r of val.slice(1)) { const o = rows[r[0]]; if (!o) continue; Object.assign(o, { fk: trNum(r[2]), fdf: trNum(r[3]), fds: trNum(r[4]), pddd: trNum(r[5]), donem: r[6] }); }
   if (ret) for (const r of ret.slice(1)) { const o = rows[r[0]]; if (!o) continue; Object.assign(o, { g1: trNum(r[2]), g5: trNum(r[3]), g21: trNum(r[4]), gy: trNum(r[5]) }); }
+  const fc = T.find(t => t[1] && /F\/K Tahmin/.test(t[1].join(' ')) && t.length > 20);   // İş Yatırım analist tahminleri (kapsadığı ~75 hisse)
+  if (fc) for (const r of fc.slice(2)) { const o = rows[r[0]]; if (!o) continue; Object.assign(o, { fkT: trNum(r[2]), fdfT: trNum(r[4]), pdT: trNum(r[6]) }); }
   return { at: new Date().toISOString(), rows };
 }
 // Büyük şirketler için teknik göstergeler (Yahoo, 1 yıl): RSI, 52 hafta zirvesinden uzaklık, 200 günlük ortalamaya göre konum
@@ -407,8 +472,10 @@ async function tefas(code, months) {
 /* ---------- Mali tablolar (İş Yatırım MaliTablo, kaynak: KAP finansal raporları) ---------- */
 const FINMAP = {
   rev: ['3C'], gp: ['3D'], op: ['3DF'], ni: ['3Z'], ca: ['1A'], inv: ['1AF'], cash: ['1AA'], ta: ['1BL'],
-  cl: ['2A'], tl: ['2A', '2B'], debt: ['2AA', '2BA'], eq: ['2O'], _dep: ['4B'], _cap: ['2OA']
+  cl: ['2A'], tl: ['2A', '2B'], debt: ['2AA', '2BA'], eq: ['2O'], _dep: ['4B'], _cap: ['2OA'],
+  cfo: ['4C'], capex: ['4CAI'], fcf: ['4CB'], fxp: ['4BE'], divp: ['4CBB']
 };
+const FIN_VER = 2;   // nakit akışı ve döviz pozisyonu kalemleri eklendi → eski kayıtlar bir kez yeniden çekilir
 // Bankalar UFRS şablonuyla raporlar
 const FINMAP_BANK = {
   rev: ['3A'], ni: ['3Z'], cash: ['1A'], ta: [['1Z', '1BL', '1L']], eq: ['2O'], _cap: ['2OA']   // iç içe dizi: ilk bulunan kod
@@ -451,7 +518,7 @@ async function financials(sym, quarters = 12) {
       if (group === 'UFRS' && row.tl == null && row.eq != null) row.tl = row.ta - row.eq;   // banka: toplam yükümlülük ≈ aktif − özkaynak
       if (row.op != null && row._dep != null) row.ebitda = row.op + Math.abs(row._dep);
       if (row._cap > 0 && shares == null) shares = row._cap;   // ödenmiş sermaye ≈ pay adedi (1 TL nominal)
-      delete row._dep; delete row._cap; out.push(row);
+      if (row._cap > 0) row.cap = row._cap; delete row._dep; delete row._cap; out.push(row);
     });
     await sleep(300);
   }
@@ -513,15 +580,22 @@ async function refreshAll(data, progress, only) {
     // Hisse: mali tablolar — ilk eklemede geçmiş 12 çeyrek, sonra haftada bir yeni dönem kontrolü
     if (a.type === 'hisse' && (!a.noFin || want) && !(patch.noAuto || (a.noAuto && !want))) {
       const age = a.finAt ? now - Date.parse(a.finAt) : Infinity;
-      if (want || !(a.fin && a.fin.length) || age > 7 * 864e5) {
+      if (want || !(a.fin && a.fin.length) || age > 7 * 864e5 || (a.mkt !== 'US' && a.finVer !== FIN_VER)) {
         try {
           progress && progress(`${a.sym} mali tablolar`);
-          const f = a.mkt === 'US' ? await foreignFin(a.src || a.sym, patch.fx || a.fx, patch.cur || a.cur) : await financials(a.src ? a.src.replace(/\.IS$/, '') : a.sym, a.fin && a.fin.length >= 8 ? 4 : 12);
+          const f = a.mkt === 'US' ? await foreignFin(a.src || a.sym, patch.fx || a.fx, patch.cur || a.cur) : await financials(a.src ? a.src.replace(/\.IS$/, '') : a.sym, a.fin && a.fin.length >= 8 && a.finVer === FIN_VER ? 4 : 12);
           patch.finAt = new Date().toISOString();
-          if (f.fin.length) { patch.noFin = false; patch.fin = mergeFin(a.fin, f.fin); if (f.shares && !a.sharesMan) patch.shares = f.shares; updated.push(`${a.sym} mali`); }
+          if (f.fin.length) { patch.noFin = false; patch.finVer = FIN_VER; patch.fin = mergeFin(a.fin, f.fin); if (f.shares && !a.sharesMan) patch.shares = f.shares; updated.push(`${a.sym} mali`); }
           else { patch.noFin = true; if (!a.noFin) errors.push(`${a.sym}: mali tablo bulunamadı (şirket değilse ya da yeni listelendiyse normal)`); }
         } catch (e) { errors.push(`${a.sym} mali tablo: ${e.message || e}`); }
       }
+    }
+    // Analist beklentileri: günde bir (hisse; BIST'te İş Yatırım + Yahoo, yabancıda Yahoo)
+    if (a.type === 'hisse' && !a.noAuto && !patch.noAuto && (want || !a.insAt || now - Date.parse(a.insAt) > 20 * 3600e3)) {
+      const ins = { ...(a.ins || {}) }; let ok = false;
+      try { progress && progress(`${a.sym} analist beklentileri`); const y = await yahooInsights(a.mkt === 'US' ? (a.src || a.sym) : `${a.sym}.IS`); if (y) { ins.y = y; ok = true; } } catch (e) { }
+      if (a.mkt !== 'US') { try { const c = await isyCard(a.sym); if (c) { ins.i = c; ok = true; } } catch (e) { } }
+      if (ok) { patch.ins = ins; patch.insAt = new Date().toISOString(); }
     }
     if (Object.keys(patch).length) patches[id] = patch;
     await sleep(250);
@@ -559,6 +633,9 @@ async function refreshAll(data, progress, only) {
       }
     } catch (e) { errors.push(`KAP fon: ${e.message || e}`); }
   }
+  // KAP şirket takvimi: yalnız tam güncellemede
+  let cal = null;
+  if (!want) { try { progress && progress('KAP şirket takvimi'); cal = await kapCalendar(); } catch (e) { errors.push(`KAP takvim: ${e.message || e}`); } }
   // Karşılaştırma serileri (dolar, gram altın, BIST 100): yalnız tam güncellemede
   let bench = null;
   if (!want) {
@@ -580,7 +657,7 @@ async function refreshAll(data, progress, only) {
       updated.push('fırsat radarı');
     } catch (e) { errors.push(`Fırsat radarı: ${e.message || e}`); radar = null; }
   }
-  return { patches, errors, updated, news, radar, bench };
+  return { patches, errors, updated, news, radar, bench, cal };
 }
 
-module.exports = { refreshAll, yfFinancials, secFinancials, usStock, radarFetch, radarTech, kapDetail, kapAttachment, kapFundScan, fundHolding, GOLD_UNITS, goldUnit, tefas, financials, mergeFin, lastQuarters, yahoo, gramMetal, coin, kapNews, kapTip, kapDate, emtiaSource, sid };
+module.exports = { refreshAll, yahooInsights, isyCard, kapCalendar, yfFinancials, secFinancials, usStock, radarFetch, radarTech, kapDetail, kapAttachment, kapFundScan, fundHolding, GOLD_UNITS, goldUnit, tefas, financials, mergeFin, lastQuarters, yahoo, gramMetal, coin, kapNews, kapTip, kapDate, emtiaSource, sid };

@@ -85,6 +85,12 @@ ul.why{margin:0;padding-left:18px;font-size:15px}ul.why li{margin:3px 0}
 .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:12px}
 .rat{border:1px solid var(--line);border-radius:10px;padding:12px 14px}.rat b{display:block;font-size:22px;white-space:nowrap}.rat.g{border-color:var(--up)}.rat.b{border-color:var(--dn)}
 .drop{border:2px dashed var(--line);border-radius:12px;padding:28px;text-align:center}.drop.on{border-color:var(--blue);background:var(--soft)}
+.hap{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--line);font-size:11px;font-weight:700;color:var(--mut);cursor:help;margin-left:4px;vertical-align:1px}
+.cbar{display:flex;height:22px;border-radius:6px;overflow:hidden;gap:2px}.cbar i{display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;font-weight:700;color:var(--card);min-width:18px}
+.cbar .up{background:var(--up)}.cbar .up2{background:color-mix(in srgb,var(--up) 60%,var(--card))}.cbar .mid{background:var(--mut)}.cbar .dn2{background:color-mix(in srgb,var(--dn) 60%,var(--card))}.cbar .dn{background:var(--dn)}
+.trng{position:relative;height:8px;border-radius:4px;background:var(--soft);margin:14px 0 6px}.trng i{position:absolute;top:-6px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:10px solid var(--ink);transform:translateX(-50%) translateY(10px)}.trng b{position:absolute;top:-4px;width:3px;height:16px;background:var(--blue);transform:translateX(-50%)}
+.pio{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:6px 16px;font-size:14px}
+.why.g li::marker{color:var(--up)}.why.b li::marker{color:var(--dn)}
 .note{background:var(--soft);border-radius:10px;padding:12px 14px;font-size:14px}
 .empty{padding:28px;text-align:center;color:var(--mut);border:1px dashed var(--line);border-radius:12px}
 .seg button{padding:0 12px}
@@ -263,7 +269,7 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
     <div class="row" style="gap:12px;flex-wrap:wrap;align-items:center">
       <div class="seg" id="rdUni" role="group" aria-label="Evren"><button type="button" data-u="top" class="on">En büyük 100</button><button type="button" data-u="all">Tüm BIST</button></div>
       <div class="seg" id="rdPre" role="group" aria-label="Hazır filtre" style="flex-wrap:wrap">
-        <button type="button" data-p="skor" class="on">Ucuzluk skoru</button><button type="button" data-p="sektor">Sektörüne göre iskontolu</button><button type="button" data-p="kalite">Ucuz + kârlı</button><button type="button" data-p="dusen">Zirveden uzak</button><button type="button" data-p="rsi">Aşırı satım</button>
+        <button type="button" data-p="skor" class="on">Ucuzluk skoru</button><button type="button" data-p="sektor">Sektörüne göre iskontolu</button><button type="button" data-p="kalite">Ucuz + kârlı</button><button type="button" data-p="dusen">Zirveden uzak</button><button type="button" data-p="tahmin">Kârı artması beklenen</button><button type="button" data-p="rsi">Aşırı satım</button>
       </div>
       <select id="rdSek" aria-label="Sektör" style="min-height:40px"><option value="">Tüm sektörler</option></select>
     </div>

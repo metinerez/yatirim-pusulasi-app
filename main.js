@@ -83,6 +83,7 @@ async function refresh(why, only) {
   for (const [id, n] of Object.entries(res.news || {})) { data.news = data.news || {}; data.news[id] = n; }
   if (res.radar) { data.radar = { main: res.radar }; }
   if (res.bench) { data.bench = { main: res.bench }; }
+  if (res.cal) { data.cal = { main: res.cal }; }
   data.settings = data.settings || {};
   const kapOk = !only && !(res.errors || []).some(e => e.startsWith('KAP'));
   const info = { at: new Date().toISOString(), why, errors: res.errors || [], updated: res.updated || [] };
@@ -209,6 +210,16 @@ async function selftest() {
     await win.webContents.executeJavaScript("location.hash='incele'"); await wait(2000); await shot('13-incele');
     await win.webContents.executeJavaScript("document.querySelector('[data-gom=NVDA]')?.click()"); await wait(2000); await shot('14-nvda-mali');
     result.radar = data.radar && data.radar.main ? { n: Object.keys(data.radar.main.rows || {}).length, top: (data.radar.main.top100 || []).length, tech: Object.keys(data.radar.main.tech || {}).length, ornek: data.radar.main.rows.THYAO } : null;
+    // Analist beklentileri / karne / takvim
+    await win.webContents.executeJavaScript("location.hash='analiz'; setTimeout(()=>{const s=document.querySelector('#aSel'); s.value='THYAO'; s.dispatchEvent(new Event('change'));},300)"); await wait(2500);
+    await win.webContents.executeJavaScript("[...document.querySelectorAll('#aBody h3')].find(h=>h.textContent.startsWith('Analist'))?.scrollIntoView()"); await wait(800); await shot('16-analist-thyao');
+    await win.webContents.executeJavaScript("{const s=document.querySelector('#aSel'); s.value='NVDA'; s.dispatchEvent(new Event('change'));}"); await wait(1500);
+    await win.webContents.executeJavaScript("[...document.querySelectorAll('#aBody h3')].find(h=>h.textContent.startsWith('Analist'))?.scrollIntoView()"); await wait(800); await shot('17-analist-nvda');
+    await win.webContents.executeJavaScript("location.hash='mali'; setTimeout(()=>{const s=document.querySelector('#mSel'); s.value='THYAO'; s.dispatchEvent(new Event('change'));},300)"); await wait(2500);
+    await win.webContents.executeJavaScript("[...document.querySelectorAll('#mBody h3')].find(h=>h.textContent.startsWith('Nakit'))?.scrollIntoView()"); await wait(800); await shot('18-mali-nakit');
+    result.ins = Object.fromEntries(Object.entries(data.assets || {}).filter(([, a]) => a.ins).map(([k, a]) => [k, { y: a.ins.y && { n: a.ins.y.n, mean: a.ins.y.mean, rec: a.ins.y.rec, earn: a.ins.y.earn }, i: a.ins.i && { oneri: a.ins.i.oneri, hedef: a.ins.i.hedef, tahmin: !!a.ins.i.tahmin }, finVer: a.finVer, cfo: (a.fin || []).slice(-1)[0]?.cfo }]));
+    result.cal = data.cal && data.cal.main ? { n: data.cal.main.items.length, ornek: data.cal.main.items.slice(0, 3) } : null;
+    result.karne = await win.webContents.executeJavaScript("document.querySelector('#mBody')?.innerText.split('Karne')[1]?.slice(0,900)||null");
     await win.webContents.executeJavaScript("location.hash='dolayli'"); await wait(1500);
     // Bildirim detayı paneli: ilk KAP bildirimine tıkla
     result.detailClick = await win.webContents.executeJavaScript("(()=>{const a=[...document.querySelectorAll('[data-det]')].find(x=>x.offsetParent); if(!a) return 'görünür bağlantı yok'; a.click(); return a.dataset.det;})()");

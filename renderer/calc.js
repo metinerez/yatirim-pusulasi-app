@@ -224,7 +224,8 @@ const C = (() => {
   const FIN = [
     ['rev', 'Hasılat', 'flow'], ['gp', 'Brüt kâr', 'flow'], ['ebitda', 'FAVÖK', 'flow'], ['op', 'Esas faaliyet kârı', 'flow'], ['ni', 'Net kâr (ana ortaklık)', 'flow'],
     ['ca', 'Dönen varlıklar', 'stock'], ['inv', 'Stoklar', 'stock'], ['cash', 'Nakit ve benzerleri', 'stock'], ['ta', 'Toplam varlıklar', 'stock'],
-    ['cl', 'KV yükümlülükler', 'stock'], ['tl', 'Toplam yükümlülükler', 'stock'], ['debt', 'Finansal borç', 'stock'], ['eq', 'Özkaynak (ana ortaklık)', 'stock']
+    ['cl', 'KV yükümlülükler', 'stock'], ['tl', 'Toplam yükümlülükler', 'stock'], ['debt', 'Finansal borç', 'stock'], ['eq', 'Özkaynak (ana ortaklık)', 'stock'],
+    ['cfo', 'İşletme faaliyetlerinden nakit', 'flow'], ['capex', 'Yatırım harcaması (capex)', 'flow'], ['fcf', 'Serbest nakit akışı', 'flow'], ['fxp', 'Net döviz pozisyonu', 'stock']
   ];
   const FIN_ALIAS = {
     rev: ['hasilat', 'satislar', 'satisgelirleri', 'netsatislar', 'revenue', 'sales', 'gelir'],
@@ -236,7 +237,9 @@ const C = (() => {
     cash: ['nakit', 'nakitvenakitbenzerleri', 'cash'], ta: ['toplamvarliklar', 'aktiftoplami', 'varliklartoplami', 'totalassets'],
     cl: ['kvyukumlulukler', 'kisavadeliyukumlulukler', 'currentliabilities'], tl: ['toplamyukumlulukler', 'yukumluluklertoplami', 'totalliabilities'],
     debt: ['finansalborc', 'finansalborclar', 'toplamfinansalborc', 'borclanmalar', 'debt'],
-    eq: ['ozkaynak', 'ozkaynaklar', 'anaortaklikaitozkaynaklar', 'equity']
+    eq: ['ozkaynak', 'ozkaynaklar', 'anaortaklikaitozkaynaklar', 'equity'],
+    cfo: ['isletmefaaliyetlerindennakit', 'isletmefaaliyetlerindenkaynaklanannetnakit', 'operatingcashflow'], capex: ['sabitsermayeyatirimlari', 'capex', 'yatirimharcamasi'],
+    fcf: ['serbestnakitakim', 'serbestnakitakisi', 'freecashflow'], fxp: ['netyabanciparapozisyonu', 'netdovizpozisyonu']
   };
   function parsePeriod(s) {
     if (typeof s === 'number') { if (s > 20000 && s < 80000) s = excelDate(s); else if (!(s >= 1990 && s <= 2100)) return null; }
@@ -279,8 +282,33 @@ const C = (() => {
       gm: dv(gp, rev), em: dv(eb, rev), om: dv(op, rev), nm: dv(ni, rev),
       cr: dv(cur.ca, cur.cl), qr: cur.ca != null && cur.cl ? (cur.ca - (cur.inv || 0)) / cur.cl : null,
       de: dv(cur.tl, cur.eq), ndEbitda: dv(nd, eb), eps: dv(ni, N), bvps: dv(cur.eq, N),
-      revG: yoy(s, 'rev'), niG: yoy(s, 'ni'), ebG: yoy(s, 'ebitda'), negNI: ni != null && ni < 0
+      revG: yoy(s, 'rev'), niG: yoy(s, 'ni'), ebG: yoy(s, 'ebitda'), negNI: ni != null && ni < 0,
+      cfo: T('cfo'), fcf: T('fcf'), capex: T('capex'), fcfY: pos(T('fcf'), mcap), cfoNi: ni > 0 && T('cfo') != null ? T('cfo') / ni : null,
+      fxp: cur.fxp ?? null, fxpEq: dv(cur.fxp, cur.eq), capexRev: dv(T('capex') != null ? Math.abs(T('capex')) : null, rev)
     };
+  }
+  /* Piotroski F-skoru (0–9): kârlılık, kaldıraç/likidite ve verimlilikte iyileşme. Bir yıl önceki aynı döneme göre. */
+  function piotroski(asset) {
+    const s = finSorted(asset.fin); const cur = s[s.length - 1]; if (!cur) return null;
+    const pyIdx = s.findIndex(f => f.y === cur.y - 1 && f.m === cur.m); if (pyIdx < 0) return null;
+    const ps = s.slice(0, pyIdx + 1), py = s[pyIdx];
+    const T = (arr, k) => ttm(arr, k)?.v ?? null;
+    const ni = T(s, 'ni'), ni0 = T(ps, 'ni'), cfo = T(s, 'cfo'), rev = T(s, 'rev'), rev0 = T(ps, 'rev'), gp = T(s, 'gp'), gp0 = T(ps, 'gp');
+    const q = (a, b) => a != null && b ? a / b : null;
+    const roa = q(ni, cur.ta), roa0 = q(ni0, py.ta), lev = q(cur.debt, cur.ta), lev0 = q(py.debt, py.ta), crr = q(cur.ca, cur.cl), crr0 = q(py.ca, py.cl);
+    const gm = q(gp, rev), gm0 = q(gp0, rev0), at = q(rev, cur.ta), at0 = q(rev0, py.ta);
+    const C = [
+      ['Net kâr pozitif', roa != null ? roa > 0 : null],
+      ['İşletme nakit akışı pozitif', cfo != null ? cfo > 0 : null],
+      ['Aktif kârlılığı arttı', roa != null && roa0 != null ? roa > roa0 : null],
+      ['Nakit akışı net kârdan büyük (kâr kalitesi)', cfo != null && ni != null ? cfo > ni : null],
+      ['Borçluluk azaldı', lev != null && lev0 != null ? lev < lev0 : null],
+      ['Cari oran yükseldi', crr != null && crr0 != null ? crr > crr0 : null],
+      ['Yeni pay ihracı yok (sermaye artmadı)', cur.cap && py.cap ? cur.cap <= py.cap * 1.001 : null],
+      ['Brüt marj arttı', gm != null && gm0 != null ? gm > gm0 : null],
+      ['Aktif devir hızı arttı', at != null && at0 != null ? at > at0 : null]];
+    const known = C.filter(c => c[1] != null); if (known.length < 6) return null;
+    return { score: known.filter(c => c[1]).length, n: known.length, items: C.map(([l, ok]) => ({ l, ok })), vs: pkey(py) };
   }
   /* Eşikler; her biri -2..+2 puan */
   const RULES = [
